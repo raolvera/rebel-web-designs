@@ -1,0 +1,20 @@
+{
+  "name": "rebel-server",
+  "version": "1.0.0",
+  "description": "Backend for Rebel Web Designs: Stripe Checkout + Rebel RAG chatbot",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js",
+    "seed": "node src/rag/buildIndex.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.7.1",
+    "helmet": "^8.3.0",
+    "stripe": "^16.8.0"
+  }
+}

@@ -1,0 +1,57 @@
+# Builds the website and publishes it to GitHub Pages (rebelwebdesigns.com)
+# every time main is pushed. Only the built site in client/dist goes live;
+# the server and its secrets are never part of the deploy.
+name: Deploy website
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+
+      - name: Install
+        working-directory: client
+        run: npm ci
+
+      - name: Build (uses client/.env.production, so it's the Coming Soon lock)
+        working-directory: client
+        run: npm run build
+
+      - name: Page links fallback
+        # GitHub Pages serves 404.html for unknown paths, so links like
+        # /pricing still load the app instead of a GitHub error page.
+        run: cp client/dist/index.html client/dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

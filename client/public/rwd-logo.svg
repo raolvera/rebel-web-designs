@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" role="img" aria-label="Rebel Web Designs">
+  <defs>
+    <linearGradient id="rwdSilver" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.5" stop-color="#c9ccd1"/>
+      <stop offset="1" stop-color="#8a8d93"/>
+    </linearGradient>
+  </defs>
+
+  <!-- dark disc backing so letters stay readable -->
+  <circle cx="60" cy="60" r="56" fill="#0a0a0b"/>
+
+  <!-- www globe -->
+  <g fill="none" stroke="#c9ccd1" stroke-width="3.8" stroke-linecap="round">
+    <circle cx="60" cy="60" r="50"/>
+    <ellipse cx="60" cy="60" rx="21" ry="50"/>
+    <line x1="10" y1="60" x2="110" y2="60"/>
+    <path d="M18 36c26 14 58 14 84 0"/>
+    <path d="M18 84c26-14 58-14 84 0"/>
+  </g>
+
+  <!-- RWD letters -->
+  <text x="60" y="61" text-anchor="middle" dominant-baseline="central"
+        font-family="'Space Grotesk', system-ui, sans-serif"
+        font-size="44" font-weight="700" letter-spacing="-1"
+        fill="url(#rwdSilver)"
+        style="paint-order: stroke; stroke: #0a0a0b; stroke-width: 6px;">RWD</text>
+</svg>
