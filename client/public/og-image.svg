@@ -47,7 +47,7 @@
   <!-- Wordmark -->
   <text x="600" y="330" text-anchor="middle"
     font-family="'Space Grotesk', Arial, sans-serif" font-size="30" font-weight="600"
-    letter-spacing="6" fill="#8a8d93">FUEL YOUR FIRE WITH</text>
+    letter-spacing="3" fill="#8a8d93">Fuel your Fire with</text>
   <text x="600" y="410" text-anchor="middle"
     font-family="'Space Grotesk', Arial, sans-serif" font-size="78" font-weight="700"
     letter-spacing="6" fill="url(#silver)">REBEL WEB DESIGNS</text>

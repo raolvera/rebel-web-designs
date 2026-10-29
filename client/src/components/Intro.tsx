@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import RwdMark from "./RwdMark";
+import CircuitWeb from "./CircuitWeb";
 
 /**
  * Intro splash. Click ANYWHERE on it → the song starts automatically (that one
@@ -109,6 +110,8 @@ export default function Intro() {
       }`}
       style={{ paddingTop: topPad, paddingBottom: reserved }}
     >
+      {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
+      <CircuitWeb />
       <div className="pointer-events-none absolute inset-0 grid-floor" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blood/15 blur-[120px]" />
 

@@ -1,7 +1,10 @@
+import { useId } from "react";
+
 /**
- * Decorative site background: goth spiderwebs in the corners + chrome circuit
- * traces with crimson data pulses running along them. Purely visual
- * (aria-hidden, no pointer events) and sits BEHIND all page content.
+ * Decorative site background: spiderwebs wired like circuitry + chrome circuit
+ * traces, with crimson data beams running through BOTH. Purely visual
+ * (aria-hidden, no pointer events) and sits BEHIND page content.
+ * Used on the main site (Layout) and on the Coming Soon intro.
  */
 
 type Pt = [number, number];
@@ -16,12 +19,11 @@ function webPaths(size: number, spokes: number, rings: number) {
   }
   const at = (a: number, r: number): Pt => [Math.cos(a) * r, Math.sin(a) * r];
 
-  const spokeD = angles
-    .map((a) => {
-      const [x, y] = at(a, size);
-      return `M0 0 L${x.toFixed(1)} ${y.toFixed(1)}`;
-    })
-    .join(" ");
+  // Each spoke is its own path so a beam can run along it from the hub outward.
+  const spokeDs = angles.map((a) => {
+    const [x, y] = at(a, size);
+    return `M0 0 L${x.toFixed(1)} ${y.toFixed(1)}`;
+  });
 
   const ringDs: string[] = [];
   for (let k = 1; k <= rings; k++) {
@@ -37,22 +39,50 @@ function webPaths(size: number, spokes: number, rings: number) {
     }
     ringDs.push(d);
   }
-  return { spokeD, ringDs };
+  return { spokeDs, ringDs };
 }
 
-function CornerWeb({ className, flip }: { className: string; flip: string }) {
+function CornerWeb({ className, flip, glowId }: { className: string; flip: string; glowId: string }) {
   const S = 400;
-  const { spokeD, ringDs } = webPaths(S, 8, 7);
+  const { spokeDs, ringDs } = webPaths(S, 8, 7);
+  // Beams on every spoke, and on alternating rings so it isn't too busy.
+  const beamRings = ringDs.filter((_, i) => i % 2 === 1);
   return (
     <svg viewBox={`0 0 ${S} ${S}`} className={className} style={{ transform: flip }}>
+      {/* silver silk (same chrome as the circuit traces) */}
       <g fill="none" stroke="#c9ccd1" strokeLinecap="round">
-        <path d={spokeD} strokeWidth="1.1" opacity="0.5" />
+        {spokeDs.map((d, i) => (
+          <path key={`s${i}`} d={d} strokeWidth="1.1" opacity="0.5" />
+        ))}
         {ringDs.map((d, i) => (
-          <path key={i} d={d} strokeWidth="0.8" opacity={0.45 - i * 0.03} />
+          <path key={`r${i}`} d={d} strokeWidth="0.8" opacity={0.45 - i * 0.03} />
         ))}
       </g>
-      {/* a single dewdrop catching crimson light */}
-      <circle cx={S * 0.42} cy={S * 0.3} r="2.2" fill="#e11d2a" className="cw-dew" />
+
+      {/* hub pad, like a chip the web is wired to */}
+      <circle cx="0" cy="0" r="7" fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1.2" opacity="0.5" />
+
+      {/* crimson beams running through the web */}
+      <g fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter={`url(#${glowId})`}>
+        {spokeDs.map((d, i) => (
+          <path
+            key={`bs${i}`}
+            d={d}
+            pathLength={100}
+            className="cw-pulse"
+            style={{ animationDelay: `${(i * 0.9) % 6}s`, animationDuration: `${5 + (i % 3)}s` }}
+          />
+        ))}
+        {beamRings.map((d, i) => (
+          <path
+            key={`br${i}`}
+            d={d}
+            pathLength={100}
+            className="cw-pulse"
+            style={{ animationDelay: `${1.5 + i * 1.7}s`, animationDuration: `${7 + i}s` }}
+          />
+        ))}
+      </g>
     </svg>
   );
 }
@@ -76,16 +106,14 @@ const PADS: Pt[] = [
 ];
 
 export default function CircuitWeb() {
+  // Unique per instance, since this can be on screen twice (site + intro).
+  const glowId = `cwGlow-${useId().replace(/:/g, "")}`;
+
   return (
     <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-      {/* Circuit layer */}
-      <svg
-        viewBox="0 0 1440 900"
-        preserveAspectRatio="xMidYMid slice"
-        className="absolute inset-0 h-full w-full"
-      >
+      <svg width="0" height="0" className="absolute">
         <defs>
-          <filter id="cwGlow" x="-50%" y="-50%" width="200%" height="200%">
+          <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
             <feGaussianBlur stdDeviation="2.5" result="b" />
             <feMerge>
               <feMergeNode in="b" />
@@ -93,7 +121,14 @@ export default function CircuitWeb() {
             </feMerge>
           </filter>
         </defs>
+      </svg>
 
+      {/* Circuit layer */}
+      <svg
+        viewBox="0 0 1440 900"
+        preserveAspectRatio="xMidYMid slice"
+        className="absolute inset-0 h-full w-full"
+      >
         {/* static chrome traces */}
         <g fill="none" stroke="#c9ccd1" strokeWidth="1.2" strokeLinejoin="round" opacity="0.13">
           {TRACES.map((d, i) => (
@@ -109,7 +144,7 @@ export default function CircuitWeb() {
         </g>
 
         {/* crimson data pulses travelling along the traces */}
-        <g fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter="url(#cwGlow)">
+        <g fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter={`url(#${glowId})`}>
           {TRACES.map((d, i) => (
             <path
               key={i}
@@ -122,9 +157,9 @@ export default function CircuitWeb() {
         </g>
       </svg>
 
-      {/* Spiderwebs in opposite corners */}
-      <CornerWeb className="absolute left-0 top-0 w-56 opacity-60 sm:w-80 lg:w-[26rem]" flip="none" />
-      <CornerWeb className="absolute bottom-0 right-0 w-56 opacity-50 sm:w-80 lg:w-[26rem]" flip="rotate(180deg)" />
+      {/* Circuit spiderwebs in opposite corners */}
+      <CornerWeb glowId={glowId} className="absolute left-0 top-0 w-56 opacity-60 sm:w-80 lg:w-[26rem]" flip="none" />
+      <CornerWeb glowId={glowId} className="absolute bottom-0 right-0 w-56 opacity-50 sm:w-80 lg:w-[26rem]" flip="rotate(180deg)" />
 
       {/* soft vignette so everything fades into the black */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,#0a0a0b_100%)]" />
