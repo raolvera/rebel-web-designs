@@ -105,7 +105,7 @@ export default function Intro() {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-start overflow-y-auto bg-ink transition-opacity duration-700 ${
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-start overflow-y-auto overflow-x-hidden bg-ink transition-opacity duration-700 ${
         leaving ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
       style={{ paddingTop: topPad, paddingBottom: reserved }}
@@ -137,7 +137,7 @@ export default function Intro() {
       </p>
       <h1
         data-text="REBEL WEB DESIGNS"
-        className="glitch glitch-auto intro-word rwd-word relative mt-2 font-display text-3xl font-bold tracking-[0.3em] text-silver sm:text-5xl"
+        className="glitch glitch-auto intro-word rwd-word relative mt-2 max-w-full whitespace-nowrap px-2 text-center font-display text-[1.45rem] font-bold tracking-[0.12em] text-silver min-[400px]:text-2xl sm:text-5xl sm:tracking-[0.3em]"
       >
         REBEL WEB DESIGNS
       </h1>
@@ -149,7 +149,7 @@ export default function Intro() {
       {LOCKED ? (
         <p className="mt-8 max-w-md px-6 text-center text-sm text-ash">
           Something iconic is being built. Full-stack web development, UX/UI, and graphic
-          design. Launching soon.
+          design services launching soon!
         </p>
       ) : (
         <>

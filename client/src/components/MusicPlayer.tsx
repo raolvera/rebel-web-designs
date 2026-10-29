@@ -53,7 +53,6 @@ export default function MusicPlayer() {
   const [playing, setPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
   const [videoSize, setVideoSize] = useState<"sm" | "md" | "lg">("sm"); // user-resizable
-  const [collapsed, setCollapsed] = useState(false);
   // Read the intro flag synchronously so there's no race with the intro's event.
   const [introMode, setIntroMode] = useState<boolean>(() => !!(window as any).__rebelIntro);
   const [title, setTitle] = useState("Rebel Radio");
@@ -217,7 +216,6 @@ export default function MusicPlayer() {
     const onIntro = (e: Event) => {
       const on = (e as CustomEvent<boolean>).detail;
       setIntroMode(!!on);
-      if (on) setCollapsed(false); // make sure the card is visible during the intro
     };
     window.addEventListener("rebel-intro-mode", onIntro as EventListener);
     window.addEventListener("rebel-play-music", onPlay as EventListener);
@@ -245,6 +243,9 @@ export default function MusicPlayer() {
   // --- drag (pointer capture so the iframe can't swallow the drop) ---
   function onDragStart(e: React.PointerEvent) {
     if (introMode) return; // no dragging during the intro
+    // Let buttons in the header (minimize, play) get their clicks; only drag
+    // when grabbing the bar itself.
+    if ((e.target as HTMLElement).closest("button")) return;
     const base = pos ?? { x: 24, y: window.innerHeight - 180 };
     dragRef.current = { dx: e.clientX - base.x, dy: e.clientY - base.y };
     try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch { /* */ }
@@ -304,18 +305,10 @@ export default function MusicPlayer() {
 
   return (
     <div ref={cardRef} className="fixed" style={cardStyle}>
-      {collapsed ? (
-        <button
-          onClick={() => setCollapsed(false)}
-          aria-label="Open Rebel Radio"
-          className="flex items-center gap-2 rounded-full border border-silver/30 bg-steel/90 px-4 py-2 text-xs font-semibold uppercase tracking-wider text-silver shadow-card backdrop-blur transition hover:border-blood/60 hover:shadow-glow"
-        >
-          {activeLight}
-          Rebel Radio
-        </button>
-      ) : (
+        {/* The card is ALWAYS mounted, so the music never stops. Its smallest
+            size is the standard audio-only player; minimize just closes the video. */}
         <div
-          className="overflow-hidden rounded-xl border border-silver/20 bg-coal/95 shadow-card backdrop-blur"
+          className="overflow-hidden rounded-xl border border-silver/20 bg-coal shadow-card"
           style={{ width: showVideo ? Math.max(vidW, 288) : 288 /* min 288 so controls never squish */ }}
         >
           {/* Draggable header */}
@@ -331,7 +324,15 @@ export default function MusicPlayer() {
               {activeLight}
               Rebel Radio
             </span>
-            <button onClick={() => setCollapsed(true)} aria-label="Minimize" className="text-ash transition hover:text-silver">
+            {/* Minimize = close the video and go back to the standard player.
+                It never shrinks smaller than that and never stops the music. */}
+            <button
+              onClick={() => setShowVideo(false)}
+              disabled={!showVideo}
+              aria-label="Minimize player"
+              title={showVideo ? "Minimize" : "Already minimized"}
+              className="flex h-6 w-6 items-center justify-center rounded text-ash transition hover:bg-white/5 hover:text-silver disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-ash"
+            >
               —
             </button>
           </div>
@@ -446,7 +447,6 @@ export default function MusicPlayer() {
             </div>
           </div>
         </div>
-      )}
     </div>
   );
 }

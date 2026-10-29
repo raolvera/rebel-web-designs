@@ -63,7 +63,7 @@ function CornerWeb({ className, flip, glowId }: { className: string; flip: strin
       <circle cx="0" cy="0" r="7" fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1.2" opacity="0.5" />
 
       {/* crimson beams running through the web */}
-      <g fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter={`url(#${glowId})`}>
+      <g className="cw-beams" fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter={`url(#${glowId})`}>
         {spokeDs.map((d, i) => (
           <path
             key={`bs${i}`}
@@ -144,7 +144,7 @@ export default function CircuitWeb() {
         </g>
 
         {/* crimson data pulses travelling along the traces */}
-        <g fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter={`url(#${glowId})`}>
+        <g className="cw-beams" fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter={`url(#${glowId})`}>
           {TRACES.map((d, i) => (
             <path
               key={i}

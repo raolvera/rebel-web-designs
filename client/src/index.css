@@ -96,6 +96,14 @@ body {
   0% { transform: translateY(24px) scale(0.96); opacity: 0; letter-spacing: 0.7em; }
   100% { transform: translateY(0) scale(1); opacity: 1; letter-spacing: 0.3em; }
 }
+/* Phones: the wide 0.3em spacing pushes the wordmark off screen, so the
+   animation settles on tighter spacing that fits the width. */
+@media (max-width: 639px) {
+  @keyframes introWord {
+    0% { transform: translateY(24px) scale(0.96); opacity: 0; letter-spacing: 0.3em; }
+    100% { transform: translateY(0) scale(1); opacity: 1; letter-spacing: 0.12em; }
+  }
+}
 @keyframes rwdWordPulse {
   0%, 100% { text-shadow: 0 0 12px rgba(201, 204, 209, 0.3); }
   50% { text-shadow: 0 0 22px rgba(255, 255, 255, 0.85); }
@@ -224,6 +232,36 @@ body {
   0% { clip-path: inset(70% 0 0 0); }
   50% { clip-path: inset(55% 0 0 0); }
   100% { clip-path: inset(62% 0 0 0); }
+}
+
+/* --- Phones: keep the glitch subtle and the page smooth ---
+   Small screens can't redraw heavy blur + nonstop glitch every frame, which
+   made the wordmark and Rebel Radio flicker. */
+@media (max-width: 639px) {
+  /* wordmark glitch: smaller offset, slower, only flickers part of the time */
+  .glitch-auto::before,
+  .glitch-auto::after {
+    opacity: 0.55;
+    animation-duration: 2.4s;
+  }
+  .glitch-auto::before { transform: translate(1px, 0); animation-name: glitchTopMobile; }
+  .glitch-auto::after  { transform: translate(-1px, 0); animation-name: glitchBotMobile; }
+
+  /* logo letters: gentle pulse instead of a constant jitter */
+  .intro-logo .rwd-letters { animation: rwdPulse 3.2s ease-in-out infinite; }
+
+  /* red beams still run, just without the blur glow */
+  .cw-beams { filter: none; }
+}
+@keyframes glitchTopMobile {
+  0%, 82%, 100% { clip-path: inset(0 0 100% 0); }
+  86% { clip-path: inset(0 0 68% 0); }
+  92% { clip-path: inset(0 0 58% 0); }
+}
+@keyframes glitchBotMobile {
+  0%, 84%, 100% { clip-path: inset(100% 0 0 0); }
+  88% { clip-path: inset(66% 0 0 0); }
+  94% { clip-path: inset(60% 0 0 0); }
 }
 
 /* --- Animated grid floor (depth / speed) --- */
