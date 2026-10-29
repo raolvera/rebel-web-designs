@@ -98,7 +98,7 @@ body {
 }
 /* Phones: the wide 0.3em spacing pushes the wordmark off screen, so the
    animation settles on tighter spacing that fits the width. */
-@media (max-width: 639px) {
+@media (max-width: 639px), (orientation: landscape) and (max-height: 519px) {
   @keyframes introWord {
     0% { transform: translateY(24px) scale(0.96); opacity: 0; letter-spacing: 0.3em; }
     100% { transform: translateY(0) scale(1); opacity: 1; letter-spacing: 0.12em; }
@@ -237,7 +237,7 @@ body {
 /* --- Phones: keep the glitch subtle and the page smooth ---
    Small screens can't redraw heavy blur + nonstop glitch every frame, which
    made the wordmark and Rebel Radio flicker. */
-@media (max-width: 639px) {
+@media (max-width: 639px), (orientation: landscape) and (max-height: 519px) {
   /* wordmark glitch: smaller offset, slower, only flickers part of the time */
   .glitch-auto::before,
   .glitch-auto::after {

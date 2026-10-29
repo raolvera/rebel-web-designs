@@ -16,8 +16,14 @@ const HOLD_MS = 45000; // hold the intro ~45s
 // you can skip into the full site and keep building.
 const LOCKED = import.meta.env.VITE_COMING_SOON === "true";
 
+/** A phone held sideways: wider than tall, and short. Shared with MusicPlayer. */
+export function isSideways(w: number, h: number) {
+  return w > h && h < 520;
+}
+
 export default function Intro() {
   const [show, setShow] = useState(() => {
+    if (LOCKED) return true; // locked: the Coming Soon page always shows
     try {
       return sessionStorage.getItem(SESSION_KEY) !== "1";
     } catch {
@@ -37,16 +43,26 @@ export default function Intro() {
   // bottom and gets taller at MD/LG). We reserve the player's real height at
   // the bottom and, if the content won't fit above it, scale it down to fit.
   const [playerH, setPlayerH] = useState<number>(() => (window as any).__rebelPlayerH || 0);
+  const [playerW, setPlayerW] = useState<number>(() => (window as any).__rebelPlayerW || 288);
   const [vh, setVh] = useState(() => window.innerHeight);
+  const [vw, setVw] = useState(() => window.innerWidth);
   const [contentH, setContentH] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!show) return;
-    const onSize = (e: Event) => setPlayerH((e as CustomEvent<number>).detail || 0);
-    const onResize = () => setVh(window.innerHeight);
+    const onSize = (e: Event) => {
+      const d = (e as CustomEvent<{ w: number; h: number }>).detail;
+      setPlayerH(d?.h || 0);
+      setPlayerW(d?.w || 288);
+    };
+    const onResize = () => {
+      setVh(window.innerHeight);
+      setVw(window.innerWidth);
+    };
     window.addEventListener("rebel-player-size", onSize as EventListener);
     window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
     const el = contentRef.current;
     let ro: ResizeObserver | undefined;
     if (el) {
@@ -57,12 +73,17 @@ export default function Intro() {
     return () => {
       window.removeEventListener("rebel-player-size", onSize as EventListener);
       window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
       ro?.disconnect();
     };
   }, [show]);
 
-  const reserved = playerH + 8 + 20; // player + its 8px bottom gap + breathing room
-  const roomyTop = vh * 0.08;
+  // Phone held sideways: wide but short. The player moves to the bottom-right
+  // corner (see MusicPlayer), so the content sits beside it instead of under it.
+  const sideways = isSideways(vw, vh);
+  const reserved = sideways ? 12 : playerH + 8 + 20; // space kept clear at the bottom
+  const padRight = sideways ? playerW + 20 : 0; // space kept clear for the player
+  const roomyTop = vh * (sideways ? 0.04 : 0.08);
   const tightTop = vh * 0.03;
   const fitsAsIs = !contentH || contentH <= vh - roomyTop - reserved;
   const topPad = fitsAsIs ? roomyTop : tightTop;
@@ -108,7 +129,7 @@ export default function Intro() {
       className={`fixed inset-0 z-[100] flex flex-col items-center justify-start overflow-y-auto overflow-x-hidden bg-ink transition-opacity duration-700 ${
         leaving ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
-      style={{ paddingTop: topPad, paddingBottom: reserved }}
+      style={{ paddingTop: topPad, paddingBottom: reserved, paddingRight: padRight }}
     >
       {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
       <CircuitWeb />
@@ -137,7 +158,11 @@ export default function Intro() {
       </p>
       <h1
         data-text="REBEL WEB DESIGNS"
-        className="glitch glitch-auto intro-word rwd-word relative mt-2 max-w-full whitespace-nowrap px-2 text-center font-display text-[1.45rem] font-bold tracking-[0.12em] text-silver min-[400px]:text-2xl sm:text-5xl sm:tracking-[0.3em]"
+        className={`glitch glitch-auto intro-word rwd-word relative mt-2 max-w-full whitespace-nowrap px-2 text-center font-display font-bold text-silver ${
+          sideways
+            ? "text-2xl tracking-[0.12em]" /* phone-size wordmark when sideways */
+            : "text-[1.45rem] tracking-[0.12em] min-[400px]:text-2xl sm:text-5xl sm:tracking-[0.3em]"
+        }`}
       >
         REBEL WEB DESIGNS
       </h1>

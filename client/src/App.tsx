@@ -1,29 +1,26 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Layout from "./components/Layout";
+import { lazy, Suspense } from "react";
 import Intro from "./components/Intro";
-import HomePage from "./pages/HomePage";
-import ServicesPage from "./pages/ServicesPage";
-import WorkPage from "./pages/WorkPage";
-import PricingPage from "./pages/PricingPage";
-import ContactPage from "./pages/ContactPage";
-import ArcadePage from "./pages/ArcadePage";
-import NotFoundPage from "./pages/NotFoundPage";
+import MusicPlayer from "./components/MusicPlayer";
+
+// VITE_COMING_SOON=true (the public build) locks the site to the Coming Soon
+// page. The flag is fixed at build time, so in a locked build the full site's
+// code is left out of the bundle entirely: there is nothing hidden underneath
+// to expose, on any device or to search engines.
+const LOCKED = import.meta.env.VITE_COMING_SOON === "true";
+const FullSite = LOCKED ? null : lazy(() => import("./FullSite"));
 
 export default function App() {
+  if (!FullSite) {
+    return (
+      <>
+        <Intro />
+        <MusicPlayer />
+      </>
+    );
+  }
   return (
-    <BrowserRouter>
-      <Intro />
-      <Routes>
-        <Route element={<Layout />}>
-          <Route index element={<HomePage />} />
-          <Route path="services" element={<ServicesPage />} />
-          <Route path="work" element={<WorkPage />} />
-          <Route path="pricing" element={<PricingPage />} />
-          <Route path="contact" element={<ContactPage />} />
-          <Route path="arcade" element={<ArcadePage />} />
-          <Route path="*" element={<NotFoundPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <Suspense fallback={null}>
+      <FullSite />
+    </Suspense>
   );
 }

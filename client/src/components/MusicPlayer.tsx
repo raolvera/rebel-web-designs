@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { isSideways } from "./Intro";
 
 /**
  * Rebel Radio — one self-contained, draggable player card shown on every page
@@ -61,6 +62,18 @@ export default function MusicPlayer() {
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Track the screen size so the player re-fits when a phone is rotated.
+  const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useEffect(() => {
+    const on = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", on);
+    window.addEventListener("orientationchange", on);
+    return () => {
+      window.removeEventListener("resize", on);
+      window.removeEventListener("orientationchange", on);
+    };
+  }, []);
+
   // Report the card's real height (it changes with SM/MD/LG, video on/off,
   // minimize) so the intro can keep its text clear of the player.
   useEffect(() => {
@@ -68,8 +81,10 @@ export default function MusicPlayer() {
     if (!el) return;
     const report = () => {
       const h = el.offsetHeight;
+      const w = el.offsetWidth;
       (window as any).__rebelPlayerH = h;
-      window.dispatchEvent(new CustomEvent("rebel-player-size", { detail: h }));
+      (window as any).__rebelPlayerW = w;
+      window.dispatchEvent(new CustomEvent("rebel-player-size", { detail: { w, h } }));
     };
     report();
     const ro = new ResizeObserver(report);
@@ -279,10 +294,11 @@ export default function MusicPlayer() {
   // User-resizable video (16:9). Capped to the viewport so it always fits,
   // and shorter when the window is small so the whole card stays on screen.
   const DIMS = { sm: 240, md: 340, lg: 460 } as const;
-  const vw = typeof window !== "undefined" ? window.innerWidth : 1200;
-  // Width capped to the viewport; height ALWAYS follows true 16:9 so it never
-  // looks squished. (Width is what we constrain to keep it on screen.)
-  const vidW = Math.min(DIMS[videoSize], vw - 32);
+  const vw = vp.w;
+  // Width capped to the viewport, and also to the screen HEIGHT so the whole
+  // card (controls ~150px + video) fits on short screens like sideways phones.
+  const maxByHeight = Math.max(160, (vp.h - 170) / 0.62);
+  const vidW = Math.min(DIMS[videoSize], vw - 32, maxByHeight);
   // Balanced height — fuller than 16:9 but not a tall strip. ~0.62x width.
   const vidH = Math.round(vidW * 0.62);
 
@@ -292,13 +308,15 @@ export default function MusicPlayer() {
   // plus the video window when it's showing.
   const chromeH = 150;
   const estCardH = chromeH + (showVideo ? vidH : 0);
-  const vhNow = typeof window !== "undefined" ? window.innerHeight : 800;
+  const vhNow = vp.h;
   // Keep the card bottom ~24px above the viewport bottom; clamp the top so the
   // card never runs off the top edge on big (lg) video sizes.
   const defaultTop = Math.max(16, vhNow - estCardH - 24);
 
   const cardStyle: React.CSSProperties = introMode
-    ? { left: "50%", bottom: 8, transform: "translateX(-50%)", zIndex: 130 } // centered, low
+    ? isSideways(vp.w, vp.h)
+      ? { right: 8, bottom: 8, zIndex: 130 } // sideways phone: corner, beside the text
+      : { left: "50%", bottom: 8, transform: "translateX(-50%)", zIndex: 130 } // centered, low
     : pos
     ? { left: pos.x, top: pos.y, zIndex: 50 }
     : { left: 24, top: defaultTop, zIndex: 50 };
@@ -364,21 +382,34 @@ export default function MusicPlayer() {
               aria-label="Previous track"
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-silver/30 text-silver transition hover:border-blood/60"
             >
-              ⏮
+              {/* drawn icons, not text symbols: phones turn those into colored emoji */}
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                <path d="M6 5h2v14H6zM20 5v14L9 12z" />
+              </svg>
             </button>
             <button
               onClick={() => (playing ? pausePlay() : startPlay())}
               aria-label={playing ? "Pause" : "Play"}
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-plate to-silver text-base leading-none text-ink transition hover:from-white hover:to-plate"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-ember to-blood text-white shadow-[0_0_12px_rgba(225,29,42,0.45)] transition hover:brightness-110"
             >
-              {playing ? "⏸" : "▶"}
+              {playing ? (
+                <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                  <path d="M7 5h4v14H7zM13 5h4v14h-4z" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="ml-0.5 h-4 w-4 fill-current" aria-hidden="true">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              )}
             </button>
             <button
               onClick={next}
               aria-label="Next track"
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-silver/30 text-silver transition hover:border-blood/60"
             >
-              ⏭
+              <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current" aria-hidden="true">
+                <path d="M16 5h2v14h-2zM4 5l11 7-11 7z" />
+              </svg>
             </button>
             <button
               onClick={toggleShuffle}
