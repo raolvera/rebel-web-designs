@@ -1,6 +1,6 @@
 # Rebel Web Designs
 
-**Fuel your fire with Rebel Web Designs. Build a website that will last forever.**
+**Fuel your Fire with Rebel Web Designs. Build a website that will last forever.**
 
 Rebel Web Designs is an Arizona web and design studio founded by **Rey Olvera**, a full-stack
 web developer, UX/UI specialist, and graphic designer. The studio helps small businesses and
@@ -74,7 +74,7 @@ free custom quote.
 
 - **One partner for everything:** web development, design, branding, photos, and print in one place.
 - **Built for small businesses:** affordable packages that make a professional presence possible on any budget.
-- **Made to last:** clean, modern code and designs that keep looking good as your business grows.
+- **Made to last:** modern websites and designs that keep looking good as your business grows.
 - **Personal service:** you work directly with Rey from the first idea to launch day.
 - **Local roots:** proudly based in Arizona.
 
@@ -90,31 +90,5 @@ Ready to start a project or want a custom quote? Reach out through the contact f
 [rebelwebdesigns.com](https://rebelwebdesigns.com).
 
 ---
-
-<details>
-<summary>For developers</summary>
-
-Built with React, TypeScript, Tailwind CSS, Node.js, Express, Stripe, PixiJS, and Babylon.js.
-The Rebel assistant runs on a private local AI model through Ollama.
-
-```bash
-# AI models
-ollama pull qwen2.5:3b
-ollama pull nomic-embed-text
-
-# Backend
-cd server
-npm install
-cp .env.example .env
-npm run seed
-npm run dev
-
-# Website (second terminal)
-cd client
-npm install
-npm run dev
-```
-
-</details>
 
 Copyright © 2026 Rey Olvera, Rebel Web Designs. All rights reserved.
