@@ -46,6 +46,9 @@ export default function MusicPlayer() {
   const readyRef = useRef(false);
   const unlockedRef = useRef(false);
   const wantPlayRef = useRef(false);
+  const shuffleRef = useRef(false); // read inside YouTube callbacks
+  const shuffleAppliedRef = useRef(false); // has YouTube's shuffle been set on this playlist?
+  const [shuffleOn, setShuffleOn] = useState(false);
 
   const [playing, setPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
@@ -91,12 +94,40 @@ export default function MusicPlayer() {
     playerRef.current?.pauseVideo?.();
   }
 
+  // Load (or reload) the Rebel Radio playlist. Loading resets YouTube's
+  // shuffle order, so mark shuffle as "not applied" to re-apply it once ready.
+  function loadList(index?: number) {
+    shuffleAppliedRef.current = false;
+    playerRef.current?.loadPlaylist?.({
+      list: PLAYLIST_ID,
+      listType: "playlist",
+      ...(index !== undefined ? { index } : {}),
+    });
+  }
+
+  function hasPlaylist() {
+    const p = playerRef.current;
+    return !!(p && typeof p.getPlaylist === "function" && p.getPlaylist());
+  }
+
   function next() {
     const p = playerRef.current;
     if (!p || !readyRef.current) return;
     if (unlockedRef.current) p.unMute?.();
-    if (typeof p.getPlaylist === "function" && p.getPlaylist()) p.nextVideo?.();
-    else p.loadPlaylist?.({ list: PLAYLIST_ID, listType: "playlist", index: 1 });
+    if (hasPlaylist()) p.nextVideo?.();
+    else loadList(1);
+  }
+
+  function toggleShuffle() {
+    const on = !shuffleRef.current;
+    shuffleRef.current = on;
+    setShuffleOn(on);
+    // If the playlist is already loaded, shuffle it right away. Otherwise it's
+    // applied as soon as the playlist loads (see onStateChange).
+    if (readyRef.current && hasPlaylist()) {
+      playerRef.current.setShuffle?.(on);
+      shuffleAppliedRef.current = on;
+    }
   }
 
   function prev() {
@@ -140,16 +171,23 @@ export default function MusicPlayer() {
                 const d = playerRef.current?.getVideoData?.();
                 if (d?.title) setTitle(d.title);
               } catch { /* ignore */ }
+              // Shuffle was turned on before the playlist existed: apply it now.
+              try {
+                if (shuffleRef.current && !shuffleAppliedRef.current && hasPlaylist()) {
+                  playerRef.current.setShuffle?.(true);
+                  shuffleAppliedRef.current = true;
+                }
+              } catch { /* ignore */ }
               if (e.data === 0) {
                 try {
-                  playerRef.current?.loadPlaylist?.({ list: PLAYLIST_ID, listType: "playlist" });
+                  loadList();
                 } catch { /* ignore */ }
               }
             },
             onError: () => {
               // If the single video can't embed, fall back to the playlist.
               try {
-                playerRef.current?.loadPlaylist?.({ list: PLAYLIST_ID, listType: "playlist" });
+                loadList();
                 if (unlockedRef.current) playerRef.current?.unMute?.();
                 playerRef.current?.playVideo?.();
               } catch { /* ignore */ }
@@ -340,6 +378,26 @@ export default function MusicPlayer() {
               className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-silver/30 text-silver transition hover:border-blood/60"
             >
               ⏭
+            </button>
+            <button
+              onClick={toggleShuffle}
+              aria-label={shuffleOn ? "Shuffle on" : "Shuffle off"}
+              aria-pressed={shuffleOn}
+              title={shuffleOn ? "Shuffle on" : "Shuffle off"}
+              className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition ${
+                shuffleOn
+                  ? "border-blood/70 text-ember shadow-[0_0_10px_rgba(225,29,42,0.45)]"
+                  : "border-silver/30 text-silver hover:border-blood/60"
+              }`}
+            >
+              {/* shuffle arrows */}
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M16 3h5v5" />
+                <path d="M4 20 21 3" />
+                <path d="M21 16v5h-5" />
+                <path d="M15 15l6 6" />
+                <path d="M4 4l5 5" />
+              </svg>
             </button>
             <input
               type="range"
