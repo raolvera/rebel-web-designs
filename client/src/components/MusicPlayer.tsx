@@ -50,6 +50,12 @@ export default function MusicPlayer() {
   const shuffleRef = useRef(false); // read inside YouTube callbacks
   const shuffleAppliedRef = useRef(false); // has YouTube's shuffle been set on this playlist?
   const [shuffleOn, setShuffleOn] = useState(false);
+  const modeRef = useRef<"intro" | "rebel" | "mix">("intro"); // what's queued now
+  const skipIntroRef = useRef(false); // skip the intro song if it's also in the playlist
+  const shuffleOnceRef = useRef(false); // shuffle the next playlist load once
+  const errorCountRef = useRef(0); // songs in a row that couldn't play
+  const advanceTimerRef = useRef<number | null>(null);
+  const mixWatchRef = useRef<number | null>(null);
 
   const [playing, setPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
@@ -108,28 +114,116 @@ export default function MusicPlayer() {
     playerRef.current?.pauseVideo?.();
   }
 
-  // Load (or reload) the Rebel Radio playlist. Loading resets YouTube's
-  // shuffle order, so mark shuffle as "not applied" to re-apply it once ready.
-  function loadList(index?: number) {
-    shuffleAppliedRef.current = false;
-    playerRef.current?.loadPlaylist?.({
-      list: PLAYLIST_ID,
-      listType: "playlist",
-      ...(index !== undefined ? { index } : {}),
-    });
-  }
-
+  // ---------------- Playback queue ----------------
+  // "intro" = the single intro song, "rebel" = the Rebel Radio playlist,
+  // "mix"   = endless YouTube radio of similar songs once the playlist is done.
   function hasPlaylist() {
     const p = playerRef.current;
-    return !!(p && typeof p.getPlaylist === "function" && p.getPlaylist());
+    const list = p && typeof p.getPlaylist === "function" ? p.getPlaylist() : null;
+    return !!(list && list.length);
+  }
+
+  function currentId(): string | undefined {
+    try {
+      return playerRef.current?.getVideoData?.()?.video_id;
+    } catch {
+      return undefined;
+    }
+  }
+
+  function isLastInList() {
+    const p = playerRef.current;
+    if (!hasPlaylist()) return false;
+    const list = p.getPlaylist();
+    const idx = p.getPlaylistIndex?.() ?? 0;
+    return idx >= list.length - 1;
+  }
+
+  function clearTimers() {
+    if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
+    if (mixWatchRef.current) window.clearTimeout(mixWatchRef.current);
+    advanceTimerRef.current = null;
+    mixWatchRef.current = null;
+  }
+
+  // Load the Rebel Radio playlist. Loading resets YouTube's shuffle order, so
+  // shuffle is re-applied once it's ready (see onStateChange).
+  function loadRebel(skipIntro = false) {
+    clearTimers();
+    modeRef.current = "rebel";
+    skipIntroRef.current = skipIntro;
+    shuffleAppliedRef.current = false;
+    playerRef.current?.loadPlaylist?.({ list: PLAYLIST_ID, listType: "playlist", index: 0 });
+    if (unlockedRef.current) playerRef.current?.unMute?.();
+  }
+
+  // Endless radio: a YouTube Mix of songs like the one that just played.
+  function startMix(seedId?: string) {
+    const seed = seedId || currentId() || INTRO_VIDEO_ID;
+    clearTimers();
+    modeRef.current = "mix";
+    skipIntroRef.current = false;
+    shuffleAppliedRef.current = false;
+    playerRef.current?.loadPlaylist?.({ list: `RD${seed}`, listType: "playlist", index: 0 });
+    if (unlockedRef.current) playerRef.current?.unMute?.();
+    // Some mixes aren't allowed in embeds. If it doesn't start, keep the music
+    // going with the Rebel Radio playlist on shuffle instead.
+    mixWatchRef.current = window.setTimeout(() => {
+      const state = playerRef.current?.getPlayerState?.();
+      if (modeRef.current === "mix" && (!hasPlaylist() || state === -1 || state === 0 || state === 5)) {
+        fallbackToRebel();
+      }
+    }, 8000);
+  }
+
+  function fallbackToRebel() {
+    shuffleOnceRef.current = true; // replay it in a fresh order
+    loadRebel(false);
+  }
+
+  // A song finished (or was skipped past the end).
+  function onSongEnded() {
+    const p = playerRef.current;
+    if (!p) return;
+    if (modeRef.current === "intro" || !hasPlaylist()) {
+      loadRebel(true); // intro song done: start the playlist
+      return;
+    }
+    if (isLastInList()) {
+      startMix(currentId()); // playlist done: keep playing similar music
+      return;
+    }
+    // YouTube moves to the next song by itself. Only nudge it if it stalls,
+    // so a song is never skipped twice.
+    if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
+    advanceTimerRef.current = window.setTimeout(() => {
+      if (p.getPlayerState?.() === 0) p.nextVideo?.();
+    }, 1500);
+  }
+
+  // A song can't play in the embed: skip just that song, never restart the list.
+  function onSongError() {
+    errorCountRef.current += 1;
+    if (errorCountRef.current > 6) {
+      // too many in a row: stop trying so it can't loop forever
+      if (modeRef.current === "mix") fallbackToRebel();
+      return;
+    }
+    if (modeRef.current === "intro") return loadRebel(true);
+    if (modeRef.current === "mix" && !hasPlaylist()) return fallbackToRebel();
+    if (isLastInList()) return onSongEnded();
+    playerRef.current?.nextVideo?.();
   }
 
   function next() {
     const p = playerRef.current;
     if (!p || !readyRef.current) return;
-    if (unlockedRef.current) p.unMute?.();
-    if (hasPlaylist()) p.nextVideo?.();
-    else loadList(1);
+    wantPlayRef.current = true;
+    unlockedRef.current = true;
+    p.unMute?.();
+    if (modeRef.current === "intro" || !hasPlaylist()) loadRebel(true);
+    else if (isLastInList()) startMix(currentId());
+    else p.nextVideo?.();
   }
 
   function toggleShuffle() {
@@ -185,25 +279,35 @@ export default function MusicPlayer() {
                 const d = playerRef.current?.getVideoData?.();
                 if (d?.title) setTitle(d.title);
               } catch { /* ignore */ }
-              // Shuffle was turned on before the playlist existed: apply it now.
+              const p = playerRef.current;
               try {
-                if (shuffleRef.current && !shuffleAppliedRef.current && hasPlaylist()) {
-                  playerRef.current.setShuffle?.(true);
+                // A song is playing: the queue is healthy again.
+                if (e.data === 1) {
+                  errorCountRef.current = 0;
+                  if (mixWatchRef.current) window.clearTimeout(mixWatchRef.current);
+                  mixWatchRef.current = null;
+                }
+                // Shuffle (yours, or a one-time reshuffle) once the playlist exists.
+                if ((shuffleRef.current || shuffleOnceRef.current) && !shuffleAppliedRef.current && hasPlaylist()) {
+                  p.setShuffle?.(true);
                   shuffleAppliedRef.current = true;
+                  shuffleOnceRef.current = false;
+                }
+                // The intro song may also be in the playlist: don't play it twice.
+                if (skipIntroRef.current && hasPlaylist() && currentId()) {
+                  skipIntroRef.current = false;
+                  if (currentId() === INTRO_VIDEO_ID && !isLastInList()) p.nextVideo?.();
                 }
               } catch { /* ignore */ }
               if (e.data === 0) {
                 try {
-                  loadList();
+                  onSongEnded();
                 } catch { /* ignore */ }
               }
             },
             onError: () => {
-              // If the single video can't embed, fall back to the playlist.
               try {
-                loadList();
-                if (unlockedRef.current) playerRef.current?.unMute?.();
-                playerRef.current?.playVideo?.();
+                onSongError();
               } catch { /* ignore */ }
             },
           },
@@ -243,6 +347,7 @@ export default function MusicPlayer() {
 
     return () => {
       cancelled = true;
+      clearTimers();
       window.removeEventListener("rebel-play-music", onPlay as EventListener);
       window.removeEventListener("rebel-pause-music", onPause as EventListener);
       window.removeEventListener("rebel-toggle-music", onToggle as EventListener);
