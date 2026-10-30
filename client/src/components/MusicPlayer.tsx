@@ -19,6 +19,9 @@ const INTRO_VIDEO_ID = "YNwmYliuUfE";
 // the part after "watch?v="). Mixes rotate through these so the radio covers
 // all these artists. Leave empty to follow whatever song just played.
 const MIX_SEEDS: string[] = [];
+// Songs that must never play. Any song whose title contains one of these words
+// is skipped instantly (playlist, shuffle, and mixes). Lowercase.
+const BLOCKED_TITLES: string[] = ["baewatch"];
 
 declare global {
   interface Window {
@@ -60,6 +63,8 @@ export default function MusicPlayer() {
   const historyRef = useRef<number[]>([]); // play order, for the Back button
   const justLoadedRef = useRef(false); // a new list just loaded
   const mixSeedRef = useRef(0); // which MIX_SEEDS song seeds the next mix
+  const blockedIdsRef = useRef<Set<string>>(new Set()); // blocked songs found so far
+  const lastGoodIdRef = useRef<string>(INTRO_VIDEO_ID); // last song that really played
   const errorCountRef = useRef(0); // songs in a row that couldn't play
   const advanceTimerRef = useRef<number | null>(null);
   const mixWatchRef = useRef<number | null>(null);
@@ -163,6 +168,7 @@ export default function MusicPlayer() {
     const out: number[] = [];
     ids.forEach((id, i) => {
       if (i === cur || playedRef.current.has(i)) return;
+      if (blockedIdsRef.current.has(id)) return; // never pick a blocked song
       if (id === INTRO_VIDEO_ID && modeRef.current === "rebel") return;
       out.push(i);
     });
@@ -219,6 +225,8 @@ export default function MusicPlayer() {
   // otherwise the mix follows the song that just played.
   function startMix(seedId?: string) {
     let seed = seedId || currentId() || INTRO_VIDEO_ID;
+    // never build a mix around a blocked song
+    if (blockedIdsRef.current.has(seed)) seed = lastGoodIdRef.current;
     if (MIX_SEEDS.length) {
       seed = MIX_SEEDS[mixSeedRef.current % MIX_SEEDS.length];
       mixSeedRef.current += 1;
@@ -349,9 +357,28 @@ export default function MusicPlayer() {
               setPlaying(e.data === 1);
               try {
                 const d = playerRef.current?.getVideoData?.();
-                if (d?.title) setTitle(d.title);
+                const low = (d?.title || "").toLowerCase();
+                // don't even flash a blocked song's name in the player
+                if (d?.title && !BLOCKED_TITLES.some((w) => low.includes(w))) setTitle(d.title);
               } catch { /* ignore */ }
               const p = playerRef.current;
+              // Blocked song: skip it the moment it loads, before it plays.
+              try {
+                if (e.data === 1 || e.data === 3 || e.data === -1 || e.data === 5) {
+                  const t = (p?.getVideoData?.()?.title || "").toLowerCase();
+                  const id = currentId();
+                  if (id && (blockedIdsRef.current.has(id) || BLOCKED_TITLES.some((w) => t.includes(w)))) {
+                    blockedIdsRef.current.add(id);
+                    playedRef.current.add(curIndex());
+                    justLoadedRef.current = false;
+                    if (modeRef.current === "intro" || !hasPlaylist()) loadRebel(true);
+                    else if (isLastInList()) onSongEnded();
+                    else advance();
+                    return;
+                  }
+                  if (e.data === 1 && id) lastGoodIdRef.current = id;
+                }
+              } catch { /* ignore */ }
               try {
                 // A song is playing: the queue is healthy again.
                 if (e.data === 1) {
