@@ -15,6 +15,10 @@ import { isSideways } from "./Intro";
  */
 const PLAYLIST_ID = "PLDIoUOhQQPlXFSnCfj8HuVhOUSC0QwxYD";
 const INTRO_VIDEO_ID = "YNwmYliuUfE";
+// Songs that seed the endless radio once the playlist ends (YouTube video IDs,
+// the part after "watch?v="). Mixes rotate through these so the radio covers
+// all these artists. Leave empty to follow whatever song just played.
+const MIX_SEEDS: string[] = [];
 
 declare global {
   interface Window {
@@ -48,11 +52,14 @@ export default function MusicPlayer() {
   const unlockedRef = useRef(false);
   const wantPlayRef = useRef(false);
   const shuffleRef = useRef(false); // read inside YouTube callbacks
-  const shuffleAppliedRef = useRef(false); // has YouTube's shuffle been set on this playlist?
   const [shuffleOn, setShuffleOn] = useState(false);
   const modeRef = useRef<"intro" | "rebel" | "mix">("intro"); // what's queued now
   const skipIntroRef = useRef(false); // skip the intro song if it's also in the playlist
-  const shuffleOnceRef = useRef(false); // shuffle the next playlist load once
+  const reshuffleRef = useRef(false); // play the current list shuffled once (fallback replay)
+  const playedRef = useRef<Set<number>>(new Set()); // songs played in the current list
+  const historyRef = useRef<number[]>([]); // play order, for the Back button
+  const justLoadedRef = useRef(false); // a new list just loaded
+  const mixSeedRef = useRef(0); // which MIX_SEEDS song seeds the next mix
   const errorCountRef = useRef(0); // songs in a row that couldn't play
   const advanceTimerRef = useRef<number | null>(null);
   const mixWatchRef = useRef<number | null>(null);
@@ -64,6 +71,7 @@ export default function MusicPlayer() {
   const [introMode, setIntroMode] = useState<boolean>(() => !!(window as any).__rebelIntro);
   const [title, setTitle] = useState("Rebel Radio");
   const [volume, setVol] = useState(15); // soft default so it doesn't blast visitors
+  const volRef = useRef(15); // same value, readable inside YouTube callbacks
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -105,7 +113,7 @@ export default function MusicPlayer() {
     const p = playerRef.current;
     if (!readyRef.current || !p) return;
     p.unMute?.();
-    p.setVolume?.(volume);
+    p.setVolume?.(volRef.current);
     p.playVideo?.();
   }
 
@@ -131,12 +139,62 @@ export default function MusicPlayer() {
     }
   }
 
-  function isLastInList() {
+  function listIds(): string[] {
     const p = playerRef.current;
+    const list = p && typeof p.getPlaylist === "function" ? p.getPlaylist() : null;
+    return Array.isArray(list) ? list : [];
+  }
+
+  function curIndex(): number {
+    return playerRef.current?.getPlaylistIndex?.() ?? 0;
+  }
+
+  // Our own shuffle: YouTube's built-in one is unreliable in embeds (it often
+  // keeps the original order or repeats songs). Shuffle is on when you turned
+  // it on, or once after a fallback replay.
+  function shuffleActive() {
+    return shuffleRef.current || reshuffleRef.current;
+  }
+
+  // Songs in this list that haven't played yet (the intro song never repeats).
+  function unplayed(): number[] {
+    const ids = listIds();
+    const cur = curIndex();
+    const out: number[] = [];
+    ids.forEach((id, i) => {
+      if (i === cur || playedRef.current.has(i)) return;
+      if (id === INTRO_VIDEO_ID && modeRef.current === "rebel") return;
+      out.push(i);
+    });
+    return out;
+  }
+
+  function isLastInList() {
     if (!hasPlaylist()) return false;
-    const list = p.getPlaylist();
-    const idx = p.getPlaylistIndex?.() ?? 0;
-    return idx >= list.length - 1;
+    if (shuffleActive()) return unplayed().length === 0;
+    return curIndex() >= listIds().length - 1;
+  }
+
+  function playRandom() {
+    const left = unplayed();
+    if (!left.length) return false;
+    const pick = left[Math.floor(Math.random() * left.length)];
+    playerRef.current?.playVideoAt?.(pick);
+    return true;
+  }
+
+  // Go to the next song in the current order (shuffled or not).
+  function advance() {
+    if (shuffleActive()) return playRandom();
+    playerRef.current?.nextVideo?.();
+    return true;
+  }
+
+  // Fresh list loaded: forget what played in the old one.
+  function resetQueue() {
+    playedRef.current = new Set();
+    historyRef.current = [];
+    justLoadedRef.current = true;
   }
 
   function clearTimers() {
@@ -146,24 +204,30 @@ export default function MusicPlayer() {
     mixWatchRef.current = null;
   }
 
-  // Load the Rebel Radio playlist. Loading resets YouTube's shuffle order, so
-  // shuffle is re-applied once it's ready (see onStateChange).
+  // Load the Rebel Radio playlist (from the top; shuffle picks the first song).
   function loadRebel(skipIntro = false) {
     clearTimers();
     modeRef.current = "rebel";
     skipIntroRef.current = skipIntro;
-    shuffleAppliedRef.current = false;
+    resetQueue();
     playerRef.current?.loadPlaylist?.({ list: PLAYLIST_ID, listType: "playlist", index: 0 });
     if (unlockedRef.current) playerRef.current?.unMute?.();
   }
 
-  // Endless radio: a YouTube Mix of songs like the one that just played.
+  // Endless radio: a YouTube Mix of similar songs. If you've set seed songs in
+  // MIX_SEEDS, mixes rotate through them so the radio covers all those artists;
+  // otherwise the mix follows the song that just played.
   function startMix(seedId?: string) {
-    const seed = seedId || currentId() || INTRO_VIDEO_ID;
+    let seed = seedId || currentId() || INTRO_VIDEO_ID;
+    if (MIX_SEEDS.length) {
+      seed = MIX_SEEDS[mixSeedRef.current % MIX_SEEDS.length];
+      mixSeedRef.current += 1;
+    }
     clearTimers();
     modeRef.current = "mix";
     skipIntroRef.current = false;
-    shuffleAppliedRef.current = false;
+    reshuffleRef.current = false;
+    resetQueue();
     playerRef.current?.loadPlaylist?.({ list: `RD${seed}`, listType: "playlist", index: 0 });
     if (unlockedRef.current) playerRef.current?.unMute?.();
     // Some mixes aren't allowed in embeds. If it doesn't start, keep the music
@@ -177,8 +241,8 @@ export default function MusicPlayer() {
   }
 
   function fallbackToRebel() {
-    shuffleOnceRef.current = true; // replay it in a fresh order
     loadRebel(false);
+    reshuffleRef.current = true; // replay it in a fresh order
   }
 
   // A song finished (or was skipped past the end).
@@ -193,8 +257,13 @@ export default function MusicPlayer() {
       startMix(currentId()); // playlist done: keep playing similar music
       return;
     }
-    // YouTube moves to the next song by itself. Only nudge it if it stalls,
-    // so a song is never skipped twice.
+    // Shuffle: we choose the next song ourselves.
+    if (shuffleActive()) {
+      playRandom();
+      return;
+    }
+    // In order: YouTube moves to the next song by itself. Only nudge it if it
+    // stalls, so a song is never skipped twice.
     if (advanceTimerRef.current) window.clearTimeout(advanceTimerRef.current);
     advanceTimerRef.current = window.setTimeout(() => {
       if (p.getPlayerState?.() === 0) p.nextVideo?.();
@@ -211,8 +280,9 @@ export default function MusicPlayer() {
     }
     if (modeRef.current === "intro") return loadRebel(true);
     if (modeRef.current === "mix" && !hasPlaylist()) return fallbackToRebel();
+    playedRef.current.add(curIndex()); // the broken song counts as done
     if (isLastInList()) return onSongEnded();
-    playerRef.current?.nextVideo?.();
+    advance();
   }
 
   function next() {
@@ -223,39 +293,41 @@ export default function MusicPlayer() {
     p.unMute?.();
     if (modeRef.current === "intro" || !hasPlaylist()) loadRebel(true);
     else if (isLastInList()) startMix(currentId());
-    else p.nextVideo?.();
+    else advance();
   }
 
   function toggleShuffle() {
     const on = !shuffleRef.current;
     shuffleRef.current = on;
+    reshuffleRef.current = false;
     setShuffleOn(on);
-    // If the playlist is already loaded, shuffle it right away. Otherwise it's
-    // applied as soon as the playlist loads (see onStateChange).
-    if (readyRef.current && hasPlaylist()) {
-      playerRef.current.setShuffle?.(on);
-      shuffleAppliedRef.current = on;
-    }
+    // Nothing else to do: the very next song (skip or song end) follows the new setting.
   }
 
   function prev() {
     const p = playerRef.current;
     if (!p || !readyRef.current) return;
     if (unlockedRef.current) p.unMute?.();
-    // If we're more than ~3s into the track, restart it; otherwise go back a track.
+    // More than ~3s into the song: restart it. Otherwise go back to the song
+    // you actually heard before this one (works with shuffle too).
     const t = typeof p.getCurrentTime === "function" ? p.getCurrentTime() : 0;
-    if (t > 3) {
+    const h = historyRef.current;
+    if (t > 3 || !hasPlaylist() || h.length < 2) {
       p.seekTo?.(0, true);
-    } else if (typeof p.getPlaylist === "function" && p.getPlaylist()) {
-      p.previousVideo?.();
-    } else {
-      p.seekTo?.(0, true);
+      return;
     }
+    h.pop(); // drop the current song
+    p.playVideoAt?.(h[h.length - 1]);
   }
 
   function setVolume(v: number) {
     setVol(v);
-    playerRef.current?.setVolume?.(v);
+    volRef.current = v;
+    const p = playerRef.current;
+    p?.setVolume?.(v);
+    // dragging to 0 mutes; dragging back up unmutes (only after Play was pressed)
+    if (v === 0) p?.mute?.();
+    else if (unlockedRef.current) p?.unMute?.();
   }
 
   useEffect(() => {
@@ -284,19 +356,34 @@ export default function MusicPlayer() {
                 // A song is playing: the queue is healthy again.
                 if (e.data === 1) {
                   errorCountRef.current = 0;
+                  // keep your volume when a new song starts (YouTube can reset it)
+                  if (p.getVolume?.() !== volRef.current) p.setVolume?.(volRef.current);
                   if (mixWatchRef.current) window.clearTimeout(mixWatchRef.current);
                   mixWatchRef.current = null;
                 }
-                // Shuffle (yours, or a one-time reshuffle) once the playlist exists.
-                if ((shuffleRef.current || shuffleOnceRef.current) && !shuffleAppliedRef.current && hasPlaylist()) {
-                  p.setShuffle?.(true);
-                  shuffleAppliedRef.current = true;
-                  shuffleOnceRef.current = false;
-                }
-                // The intro song may also be in the playlist: don't play it twice.
-                if (skipIntroRef.current && hasPlaylist() && currentId()) {
-                  skipIntroRef.current = false;
-                  if (currentId() === INTRO_VIDEO_ID && !isLastInList()) p.nextVideo?.();
+                if (hasPlaylist() && currentId()) {
+                  // A new list just loaded at its first song.
+                  if (justLoadedRef.current) {
+                    justLoadedRef.current = false;
+                    const first = curIndex();
+                    if (shuffleActive()) {
+                      // shuffle: start on a random song instead of song 1
+                      if (playRandom()) return;
+                    } else if (skipIntroRef.current && currentId() === INTRO_VIDEO_ID && first < listIds().length - 1) {
+                      // the intro song may also be in the playlist: don't play it twice
+                      skipIntroRef.current = false;
+                      p.nextVideo?.();
+                      return;
+                    }
+                    skipIntroRef.current = false;
+                  }
+                  // Remember what actually played (for shuffle and for Back).
+                  if (e.data === 1) {
+                    const i = curIndex();
+                    playedRef.current.add(i);
+                    const h = historyRef.current;
+                    if (h[h.length - 1] !== i) h.push(i);
+                  }
                 }
               } catch { /* ignore */ }
               if (e.data === 0) {
@@ -543,7 +630,11 @@ export default function MusicPlayer() {
               value={volume}
               onChange={(e) => setVolume(Number(e.target.value))}
               aria-label="Volume"
-              className="ml-1 h-1.5 w-full min-w-0 flex-1 cursor-pointer appearance-none rounded-full bg-ink accent-blood"
+              aria-valuetext={`${volume}%`}
+              title={`Volume ${volume}%`}
+              className="rwd-range ml-1 w-full min-w-0 flex-1"
+              // red fill up to the circle, dark track after it
+              style={{ backgroundImage: `linear-gradient(to right, #e11d2a 0%, #ff3b3f ${volume}%, #0a0a0b ${volume}%, #0a0a0b 100%)` }}
             />
           </div>
 

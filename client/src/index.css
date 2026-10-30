@@ -419,6 +419,41 @@ body {
   .cw-dew { animation: none; }
 }
 
+/* --- Rebel Radio volume slider: red fill up to a red circle --- */
+.rwd-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  border: 1px solid rgba(201, 204, 209, 0.15);
+  cursor: pointer;
+  outline: none;
+  /* stop the fill from repeating into the border (red sliver at the end) */
+  background-origin: border-box;
+  background-repeat: no-repeat;
+}
+.rwd-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  background: #e11d2a;
+  border: 2px solid #f4f5f7;
+  box-shadow: 0 0 8px rgba(225, 29, 42, 0.6);
+}
+.rwd-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 9999px;
+  background: #e11d2a;
+  border: 2px solid #f4f5f7;
+  box-shadow: 0 0 8px rgba(225, 29, 42, 0.6);
+}
+.rwd-range:focus-visible {
+  box-shadow: 0 0 0 2px rgba(225, 29, 42, 0.5);
+}
+
 /* --- Thin custom scrollbar for chat --- */
 .scroll-thin::-webkit-scrollbar { width: 6px; }
 .scroll-thin::-webkit-scrollbar-thumb {
