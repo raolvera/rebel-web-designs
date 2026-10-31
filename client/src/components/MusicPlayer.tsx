@@ -14,7 +14,23 @@ import { isSideways } from "./Intro";
  * can drive it via window events.
  */
 const PLAYLIST_ID = "PLDIoUOhQQPlXFSnCfj8HuVhOUSC0QwxYD";
-const INTRO_VIDEO_ID = "YNwmYliuUfE";
+const DEFAULT_INTRO_ID = "YNwmYliuUfE"; // Moneybagg Yo - I See Why
+
+// One-day special opening songs, keyed by the visitor's local date (YYYY-MM-DD).
+// On any other day the default intro plays, so old entries can stay harmlessly.
+const SPECIAL_INTROS: Record<string, string> = {
+  "2026-10-31": "sOnqjkJTMaA", // Halloween: Michael Jackson - Thriller
+};
+
+function todayKey() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+// The opening song for this visit.
+const INTRO_VIDEO_ID = SPECIAL_INTROS[todayKey()] || DEFAULT_INTRO_ID;
 // Songs that seed the endless radio once the playlist ends (YouTube video IDs,
 // the part after "watch?v="). Mixes rotate through these so the radio covers
 // all these artists. Leave empty to follow whatever song just played.
