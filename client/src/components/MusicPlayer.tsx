@@ -31,6 +31,8 @@ function todayKey() {
 
 // The opening song for this visit.
 const INTRO_VIDEO_ID = SPECIAL_INTROS[todayKey()] || DEFAULT_INTRO_ID;
+// On a special day, that song plays on repeat all day (no playlist, no mix).
+const REPEAT_ALL_DAY = !!SPECIAL_INTROS[todayKey()];
 // Songs that seed the endless radio once the playlist ends (YouTube video IDs,
 // the part after "watch?v="). Mixes rotate through these so the radio covers
 // all these artists. Leave empty to follow whatever song just played.
@@ -82,6 +84,7 @@ export default function MusicPlayer() {
   const blockedIdsRef = useRef<Set<string>>(new Set()); // blocked songs found so far
   const lastGoodIdRef = useRef<string>(INTRO_VIDEO_ID); // last song that really played
   const errorCountRef = useRef(0); // songs in a row that couldn't play
+  const specialFailedRef = useRef(false); // the day's special song couldn't play
   const advanceTimerRef = useRef<number | null>(null);
   const mixWatchRef = useRef<number | null>(null);
 
@@ -269,10 +272,29 @@ export default function MusicPlayer() {
     reshuffleRef.current = true; // replay it in a fresh order
   }
 
+  // Special day: start the day's song over from the top.
+  function replaySpecial() {
+    const p = playerRef.current;
+    if (!p) return;
+    if (currentId() === INTRO_VIDEO_ID && !hasPlaylist()) {
+      p.seekTo?.(0, true);
+      p.playVideo?.();
+    } else {
+      clearTimers();
+      modeRef.current = "intro";
+      p.loadVideoById?.(INTRO_VIDEO_ID);
+    }
+    if (unlockedRef.current) p.unMute?.();
+  }
+
   // A song finished (or was skipped past the end).
   function onSongEnded() {
     const p = playerRef.current;
     if (!p) return;
+    if (REPEAT_ALL_DAY && !specialFailedRef.current) {
+      replaySpecial(); // Halloween: Thriller on repeat
+      return;
+    }
     if (modeRef.current === "intro" || !hasPlaylist()) {
       loadRebel(true); // intro song done: start the playlist
       return;
@@ -296,6 +318,8 @@ export default function MusicPlayer() {
 
   // A song can't play in the embed: skip just that song, never restart the list.
   function onSongError() {
+    // The day's special song can't play here: fall back to the normal music.
+    if (REPEAT_ALL_DAY && modeRef.current === "intro") specialFailedRef.current = true;
     errorCountRef.current += 1;
     if (errorCountRef.current > 6) {
       // too many in a row: stop trying so it can't loop forever
@@ -315,6 +339,7 @@ export default function MusicPlayer() {
     wantPlayRef.current = true;
     unlockedRef.current = true;
     p.unMute?.();
+    if (REPEAT_ALL_DAY && !specialFailedRef.current) return replaySpecial(); // only Thriller today
     if (modeRef.current === "intro" || !hasPlaylist()) loadRebel(true);
     else if (isLastInList()) startMix(currentId());
     else advance();
