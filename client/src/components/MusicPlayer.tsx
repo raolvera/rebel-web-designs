@@ -13,7 +13,7 @@ import { isSideways } from "./Intro";
  * unmutes on the visitor's first interaction anywhere. The intro and any page
  * can drive it via window events.
  */
-const PLAYLIST_ID = "PLDIoUOhQQPlXFSnCfj8HuVhOUSC0QwxYD";
+const PLAYLIST_ID = "PLMT3_WeQ6hPM";
 const DEFAULT_INTRO_ID = "YNwmYliuUfE"; // Moneybagg Yo - I See Why
 
 // One-day special opening songs, keyed by the visitor's local date (YYYY-MM-DD).
