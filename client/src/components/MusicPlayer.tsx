@@ -386,23 +386,33 @@ export default function MusicPlayer() {
     loadYT()
       .then((YT) => {
         if (cancelled || !hostRef.current || playerRef.current) return;
+        // On a special day load that single intro video; on any other day load
+        // the Rebel Radio playlist directly via playerVars (it's cued, since
+        // autoplay is 0, so the visitor's first Play starts the radio). Loading
+        // the list this way is the documented playlist-embed path and avoids
+        // needing an empty/placeholder video before cueing.
         playerRef.current = new YT.Player(hostRef.current, {
           width: "100%",
           height: "100%",
-          videoId: INTRO_VIDEO_ID || undefined,
-          playerVars: { autoplay: 0, controls: 1, modestbranding: 1, rel: 0, playsinline: 1 },
+          ...(INTRO_VIDEO_ID ? { videoId: INTRO_VIDEO_ID } : {}),
+          playerVars: {
+            autoplay: 0,
+            controls: 1,
+            modestbranding: 1,
+            rel: 0,
+            playsinline: 1,
+            ...(INTRO_VIDEO_ID ? {} : { list: PLAYLIST_ID, listType: "playlist" }),
+          },
           events: {
             onReady: () => {
               readyRef.current = true;
-              // No fixed intro song today: cue the playlist (paused) so the
-              // visitor's first Play starts the radio. cuePlaylist loads the
-              // list without autoplay, the way autoplay:0 does for a video.
+              // No fixed intro today: the playlist is already loaded (cued) via
+              // playerVars. Mark a fresh list so shuffle can pick the first song.
+              // Do NOT auto-start — the user presses Play.
               if (!INTRO_VIDEO_ID) {
                 modeRef.current = "rebel";
                 resetQueue();
-                playerRef.current?.cuePlaylist?.({ list: PLAYLIST_ID, listType: "playlist", index: 0 });
               }
-              // Do NOT auto-start — the user presses Play.
             },
             onStateChange: (e: any) => {
               setPlaying(e.data === 1);
