@@ -14,10 +14,11 @@ import { isSideways } from "./Intro";
  * can drive it via window events.
  */
 const PLAYLIST_ID = "PLMT3_WeQ6hPM";
-const DEFAULT_INTRO_ID = "YNwmYliuUfE"; // Moneybagg Yo - I See Why
 
 // One-day special opening songs, keyed by the visitor's local date (YYYY-MM-DD).
-// On any other day the default intro plays, so old entries can stay harmlessly.
+// On a special day that song opens Rebel Radio (Thriller repeats all day). On
+// any other day there is NO fixed intro — Rebel Radio starts straight from the
+// playlist. Old entries stay harmlessly (they only fire on their own day).
 const SPECIAL_INTROS: Record<string, string> = {
   "2026-10-31": "sOnqjkJTMaA", // Halloween: Michael Jackson - Thriller
 };
@@ -29,8 +30,9 @@ function todayKey() {
   return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
-// The opening song for this visit.
-const INTRO_VIDEO_ID = SPECIAL_INTROS[todayKey()] || DEFAULT_INTRO_ID;
+// The opening song for this visit, IF today is a special day (otherwise empty,
+// meaning Rebel Radio starts with the playlist instead of a single intro song).
+const INTRO_VIDEO_ID = SPECIAL_INTROS[todayKey()] || "";
 // On a special day, that song plays on repeat all day (no playlist, no mix).
 const REPEAT_ALL_DAY = !!SPECIAL_INTROS[todayKey()];
 // Songs that seed the endless radio once the playlist ends (YouTube video IDs,
@@ -387,11 +389,19 @@ export default function MusicPlayer() {
         playerRef.current = new YT.Player(hostRef.current, {
           width: "100%",
           height: "100%",
-          videoId: INTRO_VIDEO_ID,
+          videoId: INTRO_VIDEO_ID || undefined,
           playerVars: { autoplay: 0, controls: 1, modestbranding: 1, rel: 0, playsinline: 1 },
           events: {
             onReady: () => {
               readyRef.current = true;
+              // No fixed intro song today: cue the playlist (paused) so the
+              // visitor's first Play starts the radio. cuePlaylist loads the
+              // list without autoplay, the way autoplay:0 does for a video.
+              if (!INTRO_VIDEO_ID) {
+                modeRef.current = "rebel";
+                resetQueue();
+                playerRef.current?.cuePlaylist?.({ list: PLAYLIST_ID, listType: "playlist", index: 0 });
+              }
               // Do NOT auto-start — the user presses Play.
             },
             onStateChange: (e: any) => {
