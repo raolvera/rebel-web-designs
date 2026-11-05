@@ -13,7 +13,7 @@ import { isSideways } from "./Intro";
  * unmutes on the visitor's first interaction anywhere. The intro and any page
  * can drive it via window events.
  */
-const PLAYLIST_ID = "PLMT3_WeQ6hPM";
+const PLAYLIST_ID = "PLc1TGI0jv1YA";
 
 // One-day special opening songs, keyed by the visitor's local date (YYYY-MM-DD).
 // On a special day that song opens Rebel Radio (Thriller repeats all day). On
