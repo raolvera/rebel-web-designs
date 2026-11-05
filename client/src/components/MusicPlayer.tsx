@@ -76,7 +76,7 @@ export default function MusicPlayer() {
   const wantPlayRef = useRef(false);
   const shuffleRef = useRef(false); // read inside YouTube callbacks
   const [shuffleOn, setShuffleOn] = useState(false);
-  const modeRef = useRef<"intro" | "rebel" | "mix">("intro"); // what's queued now
+  const modeRef = useRef<"intro" | "rebel" | "mix">(INTRO_VIDEO_ID ? "intro" : "rebel"); // what's queued now
   const skipIntroRef = useRef(false); // skip the intro song if it's also in the playlist
   const reshuffleRef = useRef(false); // play the current list shuffled once (fallback replay)
   const playedRef = useRef<Set<number>>(new Set()); // songs played in the current list
