@@ -50,22 +50,42 @@
       rel="stylesheet"
     />
 
-    <!-- Structured data: helps Google understand the business for search -->
+    <!-- Structured data: tells Google this site IS "Rebel Web Designs" so the
+         brand ranks for its own name, with the right site name + logo shown. -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": "ProfessionalService",
-        "name": "Rebel Web Designs",
-        "url": "https://rebelwebdesigns.com/",
-        "image": "https://rebelwebdesigns.com/og-image.png",
-        "description": "Full-stack web development, UX/UI design (Figma), logos, flyers, graphic design, photo editing, and custom websites tailored to your audience.",
-        "slogan": "Fuel your Fire with Rebel Web Designs",
-        "areaServed": { "@type": "State", "name": "Arizona" },
-        "address": { "@type": "PostalAddress", "addressRegion": "AZ", "addressCountry": "US" },
-        "priceRange": "$$",
-        "knowsAbout": [
-          "Web Development", "UX/UI Design", "Logo Design", "Graphic Design",
-          "Flyers", "Photo Editing", "Shopify", "Wix", "GoDaddy", "React", "Figma"
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "https://rebelwebdesigns.com/#website",
+            "name": "Rebel Web Designs",
+            "alternateName": "RWD",
+            "url": "https://rebelwebdesigns.com/",
+            "publisher": { "@id": "https://rebelwebdesigns.com/#business" }
+          },
+          {
+            "@type": "ProfessionalService",
+            "@id": "https://rebelwebdesigns.com/#business",
+            "name": "Rebel Web Designs",
+            "url": "https://rebelwebdesigns.com/",
+            "logo": "https://rebelwebdesigns.com/rwd-logo.svg",
+            "image": "https://rebelwebdesigns.com/og-image.png",
+            "description": "Full-stack web development, UX/UI design (Figma), logos, flyers, graphic design, photo editing, and custom websites tailored to your audience.",
+            "slogan": "Fuel your Fire with Rebel Web Designs",
+            "areaServed": { "@type": "State", "name": "Arizona" },
+            "address": { "@type": "PostalAddress", "addressRegion": "AZ", "addressCountry": "US" },
+            "priceRange": "$$",
+            "knowsAbout": [
+              "Web Development", "UX/UI Design", "Logo Design", "Graphic Design",
+              "Flyers", "Photo Editing", "Shopify", "Wix", "GoDaddy", "React", "Figma"
+            ],
+            "sameAs": [
+              "https://github.com/raolvera",
+              "https://www.linkedin.com/in/rey-olvera/",
+              "https://reyolvera.com"
+            ]
+          }
         ]
       }
     </script>
