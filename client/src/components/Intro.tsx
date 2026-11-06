@@ -68,8 +68,8 @@ function TickerBar({ pos, rev }: { pos: "top" | "bottom"; rev?: boolean }) {
   );
 }
 
-// Faint static circuit traces + corner webs — a tad more of the motif on the
-// locked intro, with no extra animation cost.
+// Faint static circuit traces — a tad more of the motif on the locked intro,
+// no extra animation cost.
 function StaticCircuits() {
   const traces = [
     "M0 320 H240 L280 360 H520 L560 320 V220",
@@ -78,7 +78,7 @@ function StaticCircuits() {
     "M1440 120 H1240 L1200 160 H1040 L1000 120 V60",
     "M620 0 V120 L660 160 H820",
   ];
-  const pads: [number, number][] = [[560, 320], [940, 560], [460, 720], [1000, 120], [820, 160]];
+  const pads: [number, number][] = [[560, 220], [940, 640], [460, 720], [1000, 60], [820, 160]];
   return (
     <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" fill="none" aria-hidden="true">
       <g stroke="#c9ccd1" strokeWidth="1.1" strokeLinejoin="round" opacity="0.08">
@@ -87,23 +87,6 @@ function StaticCircuits() {
       <g fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1.1" opacity="0.16">
         {pads.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="3.5" />)}
       </g>
-    </svg>
-  );
-}
-
-function StaticWeb({ className, flip }: { className: string; flip: string }) {
-  const S = 100;
-  const spokes = 7;
-  const angles = Array.from({ length: spokes }, (_, i) => (90 / (spokes - 1)) * i * (Math.PI / 180));
-  const at = (a: number, r: number): [number, number] => [Math.cos(a) * r, Math.sin(a) * r];
-  const spokeDs = angles.map((a) => { const [x, y] = at(a, S); return `M0 0L${x.toFixed(1)} ${y.toFixed(1)}`; });
-  const ringRs = [26, 48, 70, 90];
-  const ringDs = ringRs.map((r) => angles.map((a, i) => { const [x, y] = at(a, r); return `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`; }).join(""));
-  return (
-    <svg viewBox={`0 0 ${S} ${S}`} className={className} style={{ transform: flip }} fill="none" stroke="#c9ccd1" strokeLinecap="round" aria-hidden="true">
-      {spokeDs.map((d, i) => <path key={`s${i}`} d={d} strokeWidth="0.9" opacity="0.4" />)}
-      {ringDs.map((d, i) => <path key={`r${i}`} d={d} strokeWidth="0.7" opacity={0.32 - i * 0.05} />)}
-      <circle cx="0" cy="0" r="5" fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1" opacity="0.5" />
     </svg>
   );
 }
@@ -226,23 +209,13 @@ export default function Intro() {
       <TickerBar pos="top" />
       <TickerBar pos="bottom" rev />
       {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
-      <CircuitWeb />
+      <CircuitWeb allCorners />
       <div className="pointer-events-none absolute inset-0 grid-floor" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blood/15 blur-[120px]" />
 
-      {/* A tad more web + circuits + grid on the locked intro — faint, static,
-          no extra animation cost so it stays light on phones. */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          backgroundImage:
-            "linear-gradient(rgba(201,204,209,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(201,204,209,0.04) 1px, transparent 1px)",
-          backgroundSize: "44px 44px",
-        }}
-      />
+      {/* A tad more circuits on the locked intro (faint + static, no extra
+          animation cost). The extra corner webs come from allCorners above. */}
       <StaticCircuits />
-      <StaticWeb className="absolute right-0 top-0 w-40 opacity-30 sm:w-52" flip="scaleX(-1)" />
-      <StaticWeb className="absolute bottom-0 left-0 w-40 opacity-25 sm:w-52" flip="scaleY(-1)" />
 
       {/* Outer box takes the SCALED height so nothing below gets pushed down */}
       <div className="relative w-full shrink-0" style={{ height: contentH ? contentH * scale : undefined }}>

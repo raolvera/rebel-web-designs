@@ -105,7 +105,7 @@ const PADS: Pt[] = [
   [800, 680], [1300, 800], [300, 760], [260, 140], [1180, 220],
 ];
 
-export default function CircuitWeb() {
+export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   // Unique per instance, since this can be on screen twice (site + intro).
   const glowId = `cwGlow-${useId().replace(/:/g, "")}`;
 
@@ -157,9 +157,15 @@ export default function CircuitWeb() {
         </g>
       </svg>
 
-      {/* Circuit spiderwebs in opposite corners */}
+      {/* Circuit spiderwebs in opposite corners (all four on the locked intro) */}
       <CornerWeb glowId={glowId} className="absolute left-0 top-0 w-56 opacity-60 sm:w-80 lg:w-[26rem]" flip="none" />
       <CornerWeb glowId={glowId} className="absolute bottom-0 right-0 w-56 opacity-50 sm:w-80 lg:w-[26rem]" flip="rotate(180deg)" />
+      {allCorners && (
+        <>
+          <CornerWeb glowId={glowId} className="absolute right-0 top-0 w-56 opacity-50 sm:w-80 lg:w-[26rem]" flip="scaleX(-1)" />
+          <CornerWeb glowId={glowId} className="absolute bottom-0 left-0 w-56 opacity-40 sm:w-80 lg:w-[26rem]" flip="scaleY(-1)" />
+        </>
+      )}
 
       {/* soft vignette so everything fades into the black */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_40%,#0a0a0b_100%)]" />
