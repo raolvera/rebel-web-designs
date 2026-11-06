@@ -283,6 +283,21 @@ body {
   animation: streak 3.5s linear infinite;
 }
 
+/* --- Intro ticker ribbon (NASDAQ-style continuous scroll) --- */
+.rwd-ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  width: max-content;
+  animation: rwdTicker 40s linear infinite;
+}
+@keyframes rwdTicker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rwd-ticker-track { animation: none; }
+}
+
 /* --- Glossy card sheen on hover --- */
 .sheen {
   position: relative;

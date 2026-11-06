@@ -89,6 +89,7 @@ export default function MusicPlayer() {
   const specialFailedRef = useRef(false); // the day's special song couldn't play
   const advanceTimerRef = useRef<number | null>(null);
   const mixWatchRef = useRef<number | null>(null);
+  const mixDisabledRef = useRef(false); // mixes can't embed here (e.g. mobile) — loop the playlist instead
 
   const [playing, setPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
@@ -270,8 +271,12 @@ export default function MusicPlayer() {
   }
 
   function fallbackToRebel() {
+    // A mix couldn't embed (common on mobile). Don't force-shuffle the replay —
+    // respect the user's shuffle toggle — and remember mixes don't work here so
+    // we don't keep retrying (and re-shuffling) every time the playlist ends.
+    mixDisabledRef.current = true;
+    reshuffleRef.current = false;
     loadRebel(false);
-    reshuffleRef.current = true; // replay it in a fresh order
   }
 
   // Special day: start the day's song over from the top.
@@ -302,7 +307,10 @@ export default function MusicPlayer() {
       return;
     }
     if (isLastInList()) {
-      startMix(currentId()); // playlist done: keep playing similar music
+      // Playlist done: keep the radio going with a Mix of similar songs. If
+      // mixes can't embed here (mobile), just loop the Rebel Radio playlist.
+      if (mixDisabledRef.current) loadRebel(false);
+      else startMix(currentId());
       return;
     }
     // Shuffle: we choose the next song ourselves.
@@ -343,8 +351,10 @@ export default function MusicPlayer() {
     p.unMute?.();
     if (REPEAT_ALL_DAY && !specialFailedRef.current) return replaySpecial(); // only Thriller today
     if (modeRef.current === "intro" || !hasPlaylist()) loadRebel(true);
-    else if (isLastInList()) startMix(currentId());
-    else advance();
+    else if (isLastInList()) {
+      if (mixDisabledRef.current) loadRebel(false);
+      else startMix(currentId());
+    } else advance();
   }
 
   function toggleShuffle() {

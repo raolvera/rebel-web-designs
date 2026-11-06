@@ -85,10 +85,12 @@ export default function Intro() {
   const padRight = sideways ? playerW + 20 : 0; // space kept clear for the player
   const roomyTop = vh * (sideways ? 0.04 : 0.08);
   const tightTop = vh * 0.03;
-  const fitsAsIs = !contentH || contentH <= vh - roomyTop - reserved;
+  // The NASDAQ-style ticker ribbon pinned to the very top of the intro.
+  const TICKER_H = 40;
+  const fitsAsIs = !contentH || contentH <= vh - roomyTop - reserved - TICKER_H;
   const topPad = fitsAsIs ? roomyTop : tightTop;
   // Shrink only as much as needed; below 50% we let it scroll instead.
-  const scale = fitsAsIs ? 1 : Math.max(0.5, Math.min(1, (vh - tightTop - reserved) / contentH));
+  const scale = fitsAsIs ? 1 : Math.max(0.5, Math.min(1, (vh - tightTop - reserved - TICKER_H) / contentH));
 
   function finish(withMusicStop: boolean) {
     if (withMusicStop) window.dispatchEvent(new Event("rebel-pause-music"));
@@ -129,8 +131,26 @@ export default function Intro() {
       className={`fixed inset-0 z-[100] flex flex-col items-center justify-start overflow-y-auto overflow-x-hidden bg-ink transition-opacity duration-700 ${
         leaving ? "pointer-events-none opacity-0" : "opacity-100"
       }`}
-      style={{ paddingTop: topPad, paddingBottom: reserved, paddingRight: padRight }}
+      style={{ paddingTop: topPad + TICKER_H, paddingBottom: reserved, paddingRight: padRight }}
     >
+      {/* NASDAQ-style scrolling ribbon: tagline + RWD, looping forever. Lives
+          only inside the locked intro so nothing from the full site leaks. */}
+      <div className="fixed top-0 inset-x-0 z-[120] flex h-10 items-center overflow-hidden border-b border-white/10 bg-coal/90 font-display text-xs font-semibold uppercase tracking-[0.2em] text-silver backdrop-blur-sm sm:text-sm">
+        <div className="rwd-ticker-track">
+          {Array.from({ length: 2 }).map((_, half) => (
+            <span key={half} className="flex shrink-0">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <span key={i} className="flex shrink-0 items-center">
+                  <span>Fuel your fire with Rebel Web Designs</span>
+                  <span className="mx-3 text-ember sm:mx-4">◆</span>
+                  <span>RWD</span>
+                  <span className="mx-3 text-ember sm:mx-4">◆</span>
+                </span>
+              ))}
+            </span>
+          ))}
+        </div>
+      </div>
       {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
       <CircuitWeb />
       <div className="pointer-events-none absolute inset-0 grid-floor" />
