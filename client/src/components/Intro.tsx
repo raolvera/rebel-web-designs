@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import RwdMark from "./RwdMark";
 import CircuitWeb from "./CircuitWeb";
 
@@ -21,16 +21,35 @@ export function isSideways(w: number, h: number) {
   return w > h && h < 520;
 }
 
-// Spider-web separator for the ticker ribbons (ties into the CircuitWeb motif).
-function WebIcon() {
+// Flame separator: crimson fire with a white-hot core and a soft glow, with a
+// gentle flicker. Follows "Fuel your fire with Rebel Web Designs".
+function FlameIcon() {
+  const id = `rwdFlame-${useId().replace(/:/g, "")}`;
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="none" stroke="currentColor" strokeWidth="0.6" strokeLinejoin="round" strokeLinecap="round">
-      <path d="M12 12L12 3M12 12L18.36 5.64M12 12L21 12M12 12L18.36 18.36M12 12L12 21M12 12L5.64 18.36M12 12L3 12M12 12L5.64 5.64M12 7L15.54 8.46L17 12L15.54 15.54L12 17L8.46 15.54L7 12L8.46 8.46ZM12 3L18.36 5.64L21 12L18.36 18.36L12 21L5.64 18.36L3 12L5.64 5.64Z" />
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="rwd-flame mx-3 h-[18px] w-[18px] shrink-0 sm:mx-4">
+      <defs>
+        <linearGradient id={id} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stopColor="#ff3b3f" />
+          <stop offset="55%" stopColor="#e11d2a" />
+          <stop offset="100%" stopColor="#8b0d18" />
+        </linearGradient>
+      </defs>
+      {/* outer flame */}
+      <path
+        fill={`url(#${id})`}
+        d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.07-2.14-.22-4.05 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.15.43-2.29 1-3a2.5 2.5 0 0 0 2.5 2.5z"
+      />
+      {/* white-hot core */}
+      <path
+        fill="#f4f5f7"
+        opacity="0.9"
+        d="M12 20.6a3 3 0 0 1-3-3c0-1.5 1.2-2.4 1.8-3.7.9 1 2.3 1.7 3.1 2.8.6.8.8 2 .3 2.9a2.9 2.9 0 0 1-2.2 1z"
+      />
     </svg>
   );
 }
 
-// Skull separator (white) — alternates with the web in the ribbon.
+// Skull separator (white) — alternates with the flame in the ribbon.
 function SkullIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="currentColor">
@@ -56,9 +75,9 @@ function TickerBar({ pos, rev }: { pos: "top" | "bottom"; rev?: boolean }) {
             {Array.from({ length: 6 }).map((_, i) => (
               <span key={i} className="flex shrink-0 items-center">
                 <span>Fuel your fire with Rebel Web Designs</span>
-                <SkullIcon />
+                <FlameIcon />
                 <span>RWD</span>
-                <WebIcon />
+                <SkullIcon />
               </span>
             ))}
           </span>

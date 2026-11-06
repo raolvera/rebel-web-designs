@@ -544,3 +544,19 @@ body {
   background: #2a2a2f;
   border-radius: 999px;
 }
+
+/* --- Ticker flame: red glow + gentle flicker so it pops --- */
+.rwd-flame {
+  transform-origin: 50% 90%;
+  filter: drop-shadow(0 0 4px rgba(225, 29, 42, 0.75)) drop-shadow(0 0 1px rgba(255, 59, 63, 0.9));
+  animation: rwdFlame 1.8s ease-in-out infinite alternate;
+}
+@keyframes rwdFlame {
+  0%   { transform: scale(1, 1); }
+  35%  { transform: scale(0.97, 1.05) skewX(-2deg); }
+  70%  { transform: scale(1.02, 0.98) skewX(1.5deg); }
+  100% { transform: scale(0.98, 1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rwd-flame { animation: none; }
+}
