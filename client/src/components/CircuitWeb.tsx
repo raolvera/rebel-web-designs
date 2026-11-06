@@ -48,9 +48,17 @@ function webPaths(size: number, spokes: number, rings: number) {
 // on that side meet).
 const LIT_TIPS = [1, 2, 3, 4, 5, 6, 7];
 
-function CornerWeb({ className, flip, glowId, fit, lit }: { className: string; flip: string; glowId: string; fit?: boolean; lit?: boolean }) {
+// Every red beam travels at this speed (screen px per second), so long and
+// short circuits, web spokes and web rings all move the same.
+const BEAM_SPEED = 120;
+const beamSecs = (px: number) => `${Math.max(0.8, px / BEAM_SPEED).toFixed(2)}s`;
+
+function CornerWeb({ className, flip, glowId, fit, lit, unitPx = 1 }: { className: string; flip: string; glowId: string; fit?: boolean; lit?: boolean; unitPx?: number }) {
   const S = 400;
   const { spokeDs, ringDs, tips } = webPaths(S, 8, 7);
+  // same beam speed as the circuits: spokes are S long, rings ~a quarter circle
+  const spokeSecs = beamSecs(S * unitPx);
+  const ringSecs = (k: number) => beamSecs(((S / 7.6) * k * Math.PI) / 2 * 1.03 * unitPx);
   // Beams on every spoke, and on alternating rings so it isn't too busy.
   const beamRings = ringDs.filter((_, i) => i % 2 === 1);
   return (
@@ -83,7 +91,7 @@ function CornerWeb({ className, flip, glowId, fit, lit }: { className: string; f
             d={d}
             pathLength={100}
             className="cw-pulse"
-            style={{ animationDelay: `${(i * 0.9) % 6}s`, animationDuration: `${5 + (i % 3)}s` }}
+            style={{ animationDelay: `${(i * 0.9) % 6}s`, animationDuration: spokeSecs }}
           />
         ))}
         {beamRings.map((d, i) => (
@@ -92,7 +100,7 @@ function CornerWeb({ className, flip, glowId, fit, lit }: { className: string; f
             d={d}
             pathLength={100}
             className="cw-pulse"
-            style={{ animationDelay: `${1.5 + i * 1.7}s`, animationDuration: `${7 + i}s` }}
+            style={{ animationDelay: `${1.5 + i * 1.7}s`, animationDuration: ringSecs(2 * i + 2) }}
           />
         ))}
       </g>
@@ -107,11 +115,43 @@ function CornerWeb({ className, flip, glowId, fit, lit }: { className: string; f
             cy={tips[i][1]}
             r="5.5"
             className="cw-node"
-            style={{ animationDelay: `${(i * 0.9) % 6}s`, animationDuration: `${5 + (i % 3)}s` }}
+            style={{ animationDelay: `${(i * 0.9) % 6}s`, animationDuration: spokeSecs }}
           />
         ))}
     </svg>
   );
+}
+
+// Length of a simple path made of M / L / H / V commands (absolute).
+function pathLen(d: string): number {
+  const parts = d.match(/[MLHV]|-?\d+(?:\.\d+)?/g) || [];
+  let x = 0;
+  let y = 0;
+  let n = 0;
+  let cmd = "M";
+  for (let i = 0; i < parts.length; ) {
+    if (/[MLHV]/.test(parts[i])) cmd = parts[i++];
+    if (cmd === "M") {
+      x = +parts[i++];
+      y = +parts[i++];
+      cmd = "L";
+    } else if (cmd === "L") {
+      const nx = +parts[i++];
+      const ny = +parts[i++];
+      n += Math.hypot(nx - x, ny - y);
+      x = nx;
+      y = ny;
+    } else if (cmd === "H") {
+      const nx = +parts[i++];
+      n += Math.abs(nx - x);
+      x = nx;
+    } else {
+      const ny = +parts[i++];
+      n += Math.abs(ny - y);
+      y = ny;
+    }
+  }
+  return n;
 }
 
 // Circuit traces in a 1440x900 space: right angles + 45deg bends, like a PCB.
@@ -426,7 +466,9 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
         // copy each pair forms a small arrow pointing in
         const dy = cy - p[1];
         if (dy > 2) {
-          const drop = dy * 0.4; // straight part before the bend
+          // the tip nearest the line is one clean 45deg line; the other one
+          // drops straight a little first, then 45deg
+          const drop = c.tip === 6 ? 0 : dy * 0.4;
           const pts: Pt[] = [p, [p[0], p[1] + drop], [p[0] + (dy - drop), cy]];
           for (let i = 1; i < pts.length; i++) taken.push([pts[i - 1], pts[i]]);
           runs.push({ tip: c.tip, pts, merge: true });
@@ -487,7 +529,9 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
     `translate(0 ${h}) scale(1 -1)`, // bottom-left
     `translate(${w} ${h}) scale(-1 -1)`, // bottom-right
   ];
-  const sets: { t?: string; traces: string[]; pads: (Pt | null)[] }[] = allCorners
+  // Main site: the 1440x900 traces are scaled to cover the screen ("slice").
+  const sliceScale = Math.max(window.innerWidth / 1440, window.innerHeight / 900);
+  const sets: { t?: string; traces: string[]; lens: number[]; pads: (Pt | null)[] }[] = allCorners
     ? mirrors.map((t, mi) => {
         // mirrors 2 and 3 are the bottom corners: on a wide screen they share
         // the center circuit with the top ones, so they skip it (drawn once)
@@ -495,19 +539,24 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
         return {
           t,
           traces: mine.map((r) => toPath(r.pts)),
+          lens: mine.map((r) => polyLen(r.pts)),
           // the center circuit joins its mirror in the middle into one line, so
           // it has no end circle (only the circle at the web tip it starts from)
           // circuits that join the center line have no end circle either
           pads: mine.map((r) => (r.merge ? null : r.pts[r.pts.length - 1])),
         };
       })
-    : [{ traces: TRACES, pads: PADS }];
+    : [{ traces: TRACES, lens: TRACES.map(pathLen), pads: PADS }];
   // Beam timing; the end pad uses the same timing so it turns red right as the
   // beam reaches it.
-  const timing = (i: number, si: number): React.CSSProperties =>
-    allCorners
-      ? { animationDelay: `${((i * 0.83 + si * 1.37) % 7).toFixed(2)}s`, animationDuration: `${5.5 + (i % 3) * 1.25}s` }
-      : { animationDelay: `${(i * 1.3 + si * 1.7) % 7}s`, animationDuration: `${6 + (i % 3) * 1.5}s` };
+  // Every beam moves at the same speed: duration = path length / speed.
+  const timing = (i: number, si: number, len: number): React.CSSProperties => ({
+    animationDelay: `${(((i * 0.83 + si * 1.37) % 7)).toFixed(2)}s`,
+    animationDuration: beamSecs(len * (allCorners ? 1 : sliceScale)),
+  });
+  // px per web viewBox unit (webs are 400 units): intro webs are webPx wide;
+  // main-site webs are roughly 400px (w-56 / sm:w-80 / lg:w-[26rem])
+  const unitPx = allCorners ? webPx / 400 : 1;
   // Unique per instance, since this can be on screen twice (site + intro).
   const glowId = `cwGlow-${useId().replace(/:/g, "")}`;
 
@@ -548,7 +597,7 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
                   d={d}
                   pathLength={100}
                   className="cw-pulse"
-                  style={timing(i, si)}
+                  style={timing(i, si, set.lens[i])}
                 />
               ))}
             </g>
@@ -556,7 +605,7 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
             {/* solder pad at every trace end: turns red when the beam hits it */}
             <g>
               {set.pads.map((pt, i) =>
-                pt ? <circle key={i} cx={pt[0]} cy={pt[1]} r="4" className="cw-pad" style={timing(i, si)} /> : null,
+                pt ? <circle key={i} cx={pt[0]} cy={pt[1]} r="4" className="cw-pad" style={timing(i, si, set.lens[i])} /> : null,
               )}
             </g>
           </g>
@@ -564,12 +613,12 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       </svg>
 
       {/* Circuit spiderwebs in opposite corners (all four on the locked intro) */}
-      <CornerWeb glowId={glowId} fit={allCorners} lit={allCorners} className={`absolute left-0 top-0 ${webSize} ${allCorners ? "opacity-50" : "opacity-60"}`} flip="none" />
-      <CornerWeb glowId={glowId} fit={allCorners} lit={allCorners} className={`absolute bottom-0 right-0 ${webSize} opacity-50`} flip="rotate(180deg)" />
+      <CornerWeb glowId={glowId} unitPx={unitPx} fit={allCorners} lit={allCorners} className={`absolute left-0 top-0 ${webSize} ${allCorners ? "opacity-50" : "opacity-60"}`} flip="none" />
+      <CornerWeb glowId={glowId} unitPx={unitPx} fit={allCorners} lit={allCorners} className={`absolute bottom-0 right-0 ${webSize} opacity-50`} flip="rotate(180deg)" />
       {allCorners && (
         <>
-          <CornerWeb glowId={glowId} fit lit className={`absolute right-0 top-0 ${webSize} opacity-50`} flip="scaleX(-1)" />
-          <CornerWeb glowId={glowId} fit lit className={`absolute bottom-0 left-0 ${webSize} opacity-50`} flip="scaleY(-1)" />
+          <CornerWeb glowId={glowId} unitPx={unitPx} fit lit className={`absolute right-0 top-0 ${webSize} opacity-50`} flip="scaleX(-1)" />
+          <CornerWeb glowId={glowId} unitPx={unitPx} fit lit className={`absolute bottom-0 left-0 ${webSize} opacity-50`} flip="scaleY(-1)" />
         </>
       )}
 
