@@ -21,6 +21,93 @@ export function isSideways(w: number, h: number) {
   return w > h && h < 520;
 }
 
+// Spider-web separator for the ticker ribbons (ties into the CircuitWeb motif).
+function WebIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round">
+      <path d="M12 12L12 3M12 12L18.36 5.64M12 12L21 12M12 12L18.36 18.36M12 12L12 21M12 12L5.64 18.36M12 12L3 12M12 12L5.64 5.64M12 7L15.54 8.46L17 12L15.54 15.54L12 17L8.46 15.54L7 12L8.46 8.46ZM12 3L18.36 5.64L21 12L18.36 18.36L12 21L5.64 18.36L3 12L5.64 5.64Z" />
+    </svg>
+  );
+}
+
+// Skull separator (white) — alternates with the web in the ribbon.
+function SkullIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="currentColor">
+      <path d="M4 11C4 6.6 7.6 3.4 12 3.4S20 6.6 20 11v5c0 1.4-1 2.4-2.4 2.7l-1.1.3c-.5.1-.8.5-.8 1v1.2a1 1 0 0 1-1 1H9.3a1 1 0 0 1-1-1V20c0-.5-.3-.9-.8-1l-1.1-.3C5 18.4 4 17.4 4 16Z" />
+      <circle cx="8.6" cy="11" r="1.8" fill="#0a0a0b" />
+      <circle cx="15.4" cy="11" r="1.8" fill="#0a0a0b" />
+      <path d="M12 13.6l1.2 1.5a.6.6 0 0 1-.5 1h-1.4a.6.6 0 0 1-.5-1Z" fill="#0a0a0b" />
+    </svg>
+  );
+}
+
+// NASDAQ-style scrolling ribbon. `pos` pins it top or bottom; `rev` reverses
+// the scroll direction. Lives only in the locked intro so nothing leaks.
+function TickerBar({ pos, rev }: { pos: "top" | "bottom"; rev?: boolean }) {
+  const border = pos === "top" ? "border-b" : "border-t";
+  const pin = pos === "top" ? "top-0" : "bottom-0";
+  const track = rev ? "rwd-ticker-track-rev" : "rwd-ticker-track";
+  return (
+    <div className={`fixed ${pin} inset-x-0 z-[120] flex h-10 items-center overflow-hidden ${border} border-white/10 bg-coal/90 font-display text-xs font-semibold uppercase tracking-[0.2em] text-silver backdrop-blur-sm sm:text-sm`}>
+      <div className={track}>
+        {Array.from({ length: 2 }).map((_, half) => (
+          <span key={half} className="flex shrink-0">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <span key={i} className="flex shrink-0 items-center">
+                <span>Fuel your fire with Rebel Web Designs</span>
+                <SkullIcon />
+                <span>RWD</span>
+                <WebIcon />
+              </span>
+            ))}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Faint static circuit traces + corner webs — a tad more of the motif on the
+// locked intro, with no extra animation cost.
+function StaticCircuits() {
+  const traces = [
+    "M0 320 H240 L280 360 H520 L560 320 V220",
+    "M1440 480 H1200 L1160 520 H980 L940 560 V640",
+    "M0 760 H200 L240 720 H460",
+    "M1440 120 H1240 L1200 160 H1040 L1000 120 V60",
+    "M620 0 V120 L660 160 H820",
+  ];
+  const pads: [number, number][] = [[560, 320], [940, 560], [460, 720], [1000, 120], [820, 160]];
+  return (
+    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" fill="none" aria-hidden="true">
+      <g stroke="#c9ccd1" strokeWidth="1.1" strokeLinejoin="round" opacity="0.08">
+        {traces.map((d, i) => <path key={i} d={d} />)}
+      </g>
+      <g fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1.1" opacity="0.16">
+        {pads.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="3.5" />)}
+      </g>
+    </svg>
+  );
+}
+
+function StaticWeb({ className, flip }: { className: string; flip: string }) {
+  const S = 100;
+  const spokes = 7;
+  const angles = Array.from({ length: spokes }, (_, i) => (90 / (spokes - 1)) * i * (Math.PI / 180));
+  const at = (a: number, r: number): [number, number] => [Math.cos(a) * r, Math.sin(a) * r];
+  const spokeDs = angles.map((a) => { const [x, y] = at(a, S); return `M0 0L${x.toFixed(1)} ${y.toFixed(1)}`; });
+  const ringRs = [26, 48, 70, 90];
+  const ringDs = ringRs.map((r) => angles.map((a, i) => { const [x, y] = at(a, r); return `${i === 0 ? "M" : "L"}${x.toFixed(1)} ${y.toFixed(1)}`; }).join(""));
+  return (
+    <svg viewBox={`0 0 ${S} ${S}`} className={className} style={{ transform: flip }} fill="none" stroke="#c9ccd1" strokeLinecap="round" aria-hidden="true">
+      {spokeDs.map((d, i) => <path key={`s${i}`} d={d} strokeWidth="0.9" opacity="0.4" />)}
+      {ringDs.map((d, i) => <path key={`r${i}`} d={d} strokeWidth="0.7" opacity={0.32 - i * 0.05} />)}
+      <circle cx="0" cy="0" r="5" fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1" opacity="0.5" />
+    </svg>
+  );
+}
+
 export default function Intro() {
   const [show, setShow] = useState(() => {
     if (LOCKED) return true; // locked: the Coming Soon page always shows
@@ -80,13 +167,13 @@ export default function Intro() {
 
   // Phone held sideways: wide but short. The player moves to the bottom-right
   // corner (see MusicPlayer), so the content sits beside it instead of under it.
+  // The NASDAQ-style ticker ribbons pinned to the very top and bottom of the intro.
+  const TICKER_H = 40;
   const sideways = isSideways(vw, vh);
-  const reserved = sideways ? 12 : playerH + 8 + 20; // space kept clear at the bottom
+  const reserved = sideways ? 12 + TICKER_H : playerH + 8 + 20 + TICKER_H; // bottom ticker + player
   const padRight = sideways ? playerW + 20 : 0; // space kept clear for the player
   const roomyTop = vh * (sideways ? 0.04 : 0.08);
   const tightTop = vh * 0.03;
-  // The NASDAQ-style ticker ribbon pinned to the very top of the intro.
-  const TICKER_H = 40;
   const fitsAsIs = !contentH || contentH <= vh - roomyTop - reserved - TICKER_H;
   const topPad = fitsAsIs ? roomyTop : tightTop;
   // Shrink only as much as needed; below 50% we let it scroll instead.
@@ -133,28 +220,29 @@ export default function Intro() {
       }`}
       style={{ paddingTop: topPad + TICKER_H, paddingBottom: reserved, paddingRight: padRight }}
     >
-      {/* NASDAQ-style scrolling ribbon: tagline + RWD, looping forever. Lives
-          only inside the locked intro so nothing from the full site leaks. */}
-      <div className="fixed top-0 inset-x-0 z-[120] flex h-10 items-center overflow-hidden border-b border-white/10 bg-coal/90 font-display text-xs font-semibold uppercase tracking-[0.2em] text-silver backdrop-blur-sm sm:text-sm">
-        <div className="rwd-ticker-track">
-          {Array.from({ length: 2 }).map((_, half) => (
-            <span key={half} className="flex shrink-0">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <span key={i} className="flex shrink-0 items-center">
-                  <span>Fuel your fire with Rebel Web Designs</span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="currentColor"><path d="M4 11C4 6.6 7.6 3.4 12 3.4S20 6.6 20 11v5c0 1.4-1 2.4-2.4 2.7l-1.1.3c-.5.1-.8.5-.8 1v1.2a1 1 0 0 1-1 1H9.3a1 1 0 0 1-1-1V20c0-.5-.3-.9-.8-1l-1.1-.3C5 18.4 4 17.4 4 16Z" /><circle cx="8.6" cy="11" r="1.8" fill="#0a0a0b" /><circle cx="15.4" cy="11" r="1.8" fill="#0a0a0b" /><path d="M12 13.6l1.2 1.5a.6.6 0 0 1-.5 1h-1.4a.6.6 0 0 1-.5-1Z" fill="#0a0a0b" /></svg>
-                  <span>RWD</span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="currentColor"><path d="M4 11C4 6.6 7.6 3.4 12 3.4S20 6.6 20 11v5c0 1.4-1 2.4-2.4 2.7l-1.1.3c-.5.1-.8.5-.8 1v1.2a1 1 0 0 1-1 1H9.3a1 1 0 0 1-1-1V20c0-.5-.3-.9-.8-1l-1.1-.3C5 18.4 4 17.4 4 16Z" /><circle cx="8.6" cy="11" r="1.8" fill="#0a0a0b" /><circle cx="15.4" cy="11" r="1.8" fill="#0a0a0b" /><path d="M12 13.6l1.2 1.5a.6.6 0 0 1-.5 1h-1.4a.6.6 0 0 1-.5-1Z" fill="#0a0a0b" /></svg>
-                </span>
-              ))}
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* NASDAQ-style scrolling ribbons: tagline + RWD looping forever. Top
+          scrolls one way, bottom the opposite; both live only in the locked
+          intro so nothing from the full site leaks. */}
+      <TickerBar pos="top" />
+      <TickerBar pos="bottom" rev />
       {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
       <CircuitWeb />
       <div className="pointer-events-none absolute inset-0 grid-floor" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blood/15 blur-[120px]" />
+
+      {/* A tad more web + circuits + grid on the locked intro — faint, static,
+          no extra animation cost so it stays light on phones. */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(201,204,209,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(201,204,209,0.04) 1px, transparent 1px)",
+          backgroundSize: "44px 44px",
+        }}
+      />
+      <StaticCircuits />
+      <StaticWeb className="absolute right-0 top-0 w-40 opacity-30 sm:w-52" flip="scaleX(-1)" />
+      <StaticWeb className="absolute bottom-0 left-0 w-40 opacity-25 sm:w-52" flip="scaleY(-1)" />
 
       {/* Outer box takes the SCALED height so nothing below gets pushed down */}
       <div className="relative w-full shrink-0" style={{ height: contentH ? contentH * scale : undefined }}>

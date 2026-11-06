@@ -592,6 +592,13 @@ export default function MusicPlayer() {
   // Balanced height — fuller than 16:9 but not a tall strip. ~0.62x width.
   const vidH = Math.round(vidW * 0.62);
 
+  // Bigger, readable text when the large video window is open (still fits on
+  // phones: the card width is capped to the viewport and the title truncates).
+  const bigVid = showVideo && videoSize === "lg";
+  const titleSize = bigVid ? "text-base" : "text-[11px]";
+  const metaSize = bigVid ? "text-xs" : "text-[11px]";
+  const btnSize = bigVid ? "text-[11px]" : "text-[10px]";
+
   // Rough height of the whole card so we can anchor it by its TOP and keep it
   // low on screen. Growing the video then expands the card DOWNWARD instead of
   // climbing up over page content. ~150px of chrome (header/title/controls/footer)
@@ -605,8 +612,8 @@ export default function MusicPlayer() {
 
   const cardStyle: React.CSSProperties = introMode
     ? isSideways(vp.w, vp.h)
-      ? { right: 8, bottom: 8, zIndex: 130 } // sideways phone: corner, beside the text
-      : { left: "50%", bottom: 8, transform: "translateX(-50%)", zIndex: 130 } // centered, low
+      ? { right: 8, bottom: 48, zIndex: 130 } // sideways phone: above the bottom ticker
+      : { left: "50%", bottom: 48, transform: "translateX(-50%)", zIndex: 130 } // centered, above the bottom ticker
     : pos
     ? { left: pos.x, top: pos.y, zIndex: 50 }
     : { left: 24, top: defaultTop, zIndex: 50 };
@@ -661,7 +668,7 @@ export default function MusicPlayer() {
           </div>
 
           {/* Title */}
-          <div className="truncate px-3 pt-2 text-[11px] text-ash" title={title}>
+          <div className={`truncate px-3 pt-2 ${titleSize} text-ash`} title={title}>
             {playing ? "♪ " : ""}{title}
           </div>
 
@@ -737,7 +744,7 @@ export default function MusicPlayer() {
           </div>
 
           {/* Audio / Video toggle + size controls */}
-          <div className="flex items-center justify-between border-t border-white/10 px-3 py-2 text-[11px]">
+          <div className={`flex items-center justify-between border-t border-white/10 px-3 py-2 ${metaSize}`}>
             <span className="font-semibold uppercase tracking-wider text-ash">
               {showVideo ? "Video" : "Audio only"}
             </span>
@@ -749,7 +756,7 @@ export default function MusicPlayer() {
                       key={s}
                       onClick={() => setVideoSize(s)}
                       aria-label={`Size ${s}`}
-                      className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase transition ${
+                      className={`rounded px-1.5 py-0.5 ${btnSize} font-bold uppercase transition ${
                         videoSize === s
                           ? "bg-blood text-white"
                           : "border border-silver/30 text-ash hover:text-silver"

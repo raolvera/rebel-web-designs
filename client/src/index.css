@@ -297,6 +297,20 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .rwd-ticker-track { animation: none; }
 }
+/* Bottom ribbon scrolls the opposite direction (right). */
+.rwd-ticker-track-rev {
+  display: inline-flex;
+  white-space: nowrap;
+  width: max-content;
+  animation: rwdTickerRev 40s linear infinite;
+}
+@keyframes rwdTickerRev {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rwd-ticker-track-rev { animation: none; }
+}
 
 /* --- Glossy card sheen on hover --- */
 .sheen {
