@@ -255,7 +255,8 @@ function cutAt(pts: Pt[], frac: number): Pt[] {
 // Spoke tip positions for a web of size 1 (multiply by the web's size in px).
 const UNIT_TIPS = webPaths(1, 8, 7).tips;
 
-type Box = { l: number; t: number; r: number; b: number };
+// `player` marks the music player: circuits always keep the full gap from it.
+type Box = { l: number; t: number; r: number; b: number; player?: boolean };
 
 // Screen size + the boxes of everything marked data-circuit-avoid (logo, words,
 // the Coming Soon pill, buttons, the music player), in screen px. Re-measures on
@@ -277,7 +278,8 @@ function useAvoidBoxes(on: boolean) {
         const boxes: Box[] = [];
         document.querySelectorAll<HTMLElement>("[data-circuit-avoid]").forEach((el) => {
           const r = el.getBoundingClientRect();
-          if (r.width && r.height) boxes.push({ l: r.left, t: r.top, r: r.right, b: r.bottom });
+          if (r.width && r.height)
+            boxes.push({ l: r.left, t: r.top, r: r.right, b: r.bottom, player: el.dataset.circuitAvoid === "player" });
         });
         // the Coming Soon pill: the center circuit ends just before it
         const pe = document.querySelector<HTMLElement>("[data-circuit-pill]");
@@ -393,7 +395,10 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
     const mirrored = (pad: number): Box[] => {
       const out: Box[] = [];
       for (const b of boxes) {
-        const g = { l: b.l - pad, t: b.t - pad, r: b.r + pad, b: b.b + pad };
+        // the music player always gets the full gap (it grows at md/lg and
+        // must never be touched, even by the tighter center circuit)
+        const p = b.player ? Math.max(pad, AVOID_PAD) : pad;
+        const g = { l: b.l - p, t: b.t - p, r: b.r + p, b: b.b + p };
         out.push(
           g,
           { l: w - g.r, r: w - g.l, t: g.t, b: g.b },
