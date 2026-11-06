@@ -131,81 +131,127 @@ const PADS: Pt[] = [
   [800, 680], [1300, 800], [300, 760], [260, 140], [1180, 220],
 ];
 
-// Locked intro: the original PCB look (right angles + 45deg notches, long runs
-// in from the screen edge, a solder pad at every end), but built EVEN: one
-// top-left quarter of the 1440x900 space, mirrored/flipped through the center
-// into all four corners so left = right and top = bottom. Rows are staggered so
-// it reads as a dense bus rather than a grid. The last row sits on the center
-// line, where its flipped copy turns it into a "<>" shape.
-const QUAD: Pt[][] = [];
-for (let k = 0; k < 5; k++) {
-  const y = 60 + 70 * k;
-  const a = 100 + 40 * (k % 3); // where the notch starts (staggered per row)
-  const b = a + 120;
-  const e = b + 25 + 60; // row end (a solder pad goes here)
-  QUAD.push([[0, y], [a, y], [a + 22, y + 22], [b, y + 22], [b + 22, y], [e, y]]);
-}
-QUAD.push([[0, 450], [150, 450], [172, 428], [300, 428], [322, 450], [390, 450]]);
+// ---------------- Locked intro circuits ----------------
+// Dense PCB rows that run in from the screen edge and stop JUST before any text
+// or component (anything marked data-circuit-avoid: the logo, words, buttons,
+// the music player). Built for the top-left quarter in real screen px and
+// mirrored/flipped into the other three, so left = right and top = bottom.
+type Box = { l: number; t: number; r: number; b: number };
 
-// Mirror/flip about the center (720,450) of the 1440x900 space.
-const QUAD_MIRRORS = [
-  undefined, // top-left
-  "translate(1440 0) scale(-1 1)", // top-right
-  "translate(0 900) scale(1 -1)", // bottom-left
-  "translate(1440 900) scale(-1 -1)", // bottom-right
-];
+const ROW_GAP = 28; // space between rows
+const NOTCH = 12; // 45deg notch height (always bends AWAY from center)
+const MARGIN = 14; // gap kept before a component or word
+const TICKER = 40; // top/bottom ticker ribbons
 
-// Cut a polyline off at x = xmax (keeps the part nearest the screen edge).
-function clipX(pts: Pt[], xmax: number): Pt[] {
-  const out: Pt[] = [];
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    if (p[0] <= xmax) {
-      out.push(p);
-      continue;
-    }
-    if (i > 0 && pts[i - 1][0] <= xmax) {
-      const q = pts[i - 1];
-      const t = (xmax - q[0]) / (p[0] - q[0]);
-      out.push([xmax, q[1] + t * (p[1] - q[1])]);
-    }
-    break;
+function buildRows(w: number, h: number, boxes: Box[]): Pt[][] {
+  // Use the obstacles AND their mirror images, so a row stops at the same spot
+  // in all four corners (keeps everything even).
+  const all: Box[] = [];
+  for (const b of boxes) {
+    all.push(
+      b,
+      { l: w - b.r, r: w - b.l, t: b.t, b: b.b },
+      { l: b.l, r: b.r, t: h - b.b, b: h - b.t },
+      { l: w - b.r, r: w - b.l, t: h - b.b, b: h - b.t },
+    );
   }
-  return out;
+  const rows: Pt[][] = [];
+  const first = TICKER + 18 + NOTCH;
+  const last = h / 2 - 16; // never reaches the center line (no "<>" diamond)
+  let k = 0;
+  for (let y = first; y <= last; y += ROW_GAP, k++) {
+    // run right until the first thing in this row's lane
+    let stop = w / 2 - 16;
+    for (const b of all) {
+      if (b.b < y - NOTCH - MARGIN || b.t > y + MARGIN) continue;
+      stop = Math.min(stop, b.l - MARGIN);
+    }
+    if (stop < 70) continue; // blocked right at the edge: skip the row
+    // staggered notch so it reads like a real board, not a grid
+    const a = stop * [0.22, 0.38, 0.3, 0.46, 0.26, 0.41][k % 6];
+    const len = stop * [0.17, 0.25, 0.13, 0.21][k % 4];
+    const pts: Pt[] = [[0, y]];
+    if (a > 24 && a + len + NOTCH + 30 < stop) {
+      pts.push([a, y], [a + NOTCH, y - NOTCH], [a + len, y - NOTCH], [a + len + NOTCH, y]);
+    }
+    pts.push([stop, y]);
+    rows.push(pts);
+  }
+  return rows;
 }
+
+// Measure everything marked data-circuit-avoid (viewport px). Re-measures on
+// resize, when the player changes size, and after the intro's entrance
+// animations settle.
+function useAvoidBoxes(on: boolean) {
+  const [state, setState] = useState<{ w: number; h: number; boxes: Box[] }>(() => ({
+    w: window.innerWidth,
+    h: window.innerHeight,
+    boxes: [],
+  }));
+  useEffect(() => {
+    if (!on) return;
+    let raf = 0;
+    const measure = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const boxes: Box[] = [];
+        document.querySelectorAll<HTMLElement>("[data-circuit-avoid]").forEach((el) => {
+          const r = el.getBoundingClientRect();
+          if (r.width && r.height) boxes.push({ l: r.left, t: r.top, r: r.right, b: r.bottom });
+        });
+        setState({ w: window.innerWidth, h: window.innerHeight, boxes });
+      });
+    };
+    const timers: number[] = [];
+    // The intro content scales with a 0.2s transition, so measure again after it.
+    const measureSoon = () => {
+      measure();
+      timers.push(window.setTimeout(measure, 350));
+    };
+    measure();
+    [400, 1600, 2600].forEach((ms) => timers.push(window.setTimeout(measure, ms)));
+    const ro = new ResizeObserver(measureSoon);
+    document.querySelectorAll("[data-circuit-avoid]").forEach((el) => ro.observe(el));
+    window.addEventListener("resize", measureSoon);
+    window.addEventListener("orientationchange", measureSoon);
+    window.addEventListener("rebel-player-size", measureSoon);
+    return () => {
+      cancelAnimationFrame(raf);
+      timers.forEach((t) => window.clearTimeout(t));
+      ro.disconnect();
+      window.removeEventListener("resize", measureSoon);
+      window.removeEventListener("orientationchange", measureSoon);
+      window.removeEventListener("rebel-player-size", measureSoon);
+    };
+  }, [on]);
+  return state;
+}
+
 const toPath = (pts: Pt[]) => pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
 
 export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   // Original web size on the main site. On the intro (allCorners) the webs are
   // sized to the screen instead, so neighbours meet exactly in the middle.
   const webSize = allCorners ? "" : "w-56 sm:w-80 lg:w-[26rem]";
-  // Screen size, so the intro circuits can be trimmed to stay clear of the player.
-  const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
-  useEffect(() => {
-    if (!allCorners) return;
-    const on = () => setVp({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener("resize", on);
-    window.addEventListener("orientationchange", on);
-    return () => {
-      window.removeEventListener("resize", on);
-      window.removeEventListener("orientationchange", on);
-    };
-  }, [allCorners]);
-  // The 1440x900 circuit space is scaled to FILL the screen ("slice"), so one
-  // viewBox unit = s screen px. Cut every trace off before it gets within
-  // (widest player half-width + breathing room) of the screen center, so the
-  // circuits never touch the music player, even large. Same cut on all four
-  // corners, so it stays even.
-  const s = Math.max(vp.w / 1440, vp.h / 900);
-  const xLimit = 720 - (230 + 36) / s;
-  const quad = QUAD.map((p) => clipX(p, xLimit)).filter((p) => p.length >= 2);
+  // Intro: dense rows in real screen px that stop just before text/components.
+  const { w, h, boxes } = useAvoidBoxes(!!allCorners);
+  const rows = allCorners ? buildRows(w, h, boxes) : [];
+  const mirrors: (string | undefined)[] = [
+    undefined, // top-left
+    `translate(${w} 0) scale(-1 1)`, // top-right
+    `translate(0 ${h}) scale(1 -1)`, // bottom-left
+    `translate(${w} ${h}) scale(-1 -1)`, // bottom-right
+  ];
   const sets: { t?: string; traces: string[]; pads: Pt[] }[] = allCorners
-    ? QUAD_MIRRORS.map((t) => ({
-        t,
-        traces: quad.map(toPath),
-        pads: quad.map((p) => p[p.length - 1]),
-      }))
+    ? mirrors.map((t) => ({ t, traces: rows.map(toPath), pads: rows.map((p) => p[p.length - 1]) }))
     : [{ traces: TRACES, pads: PADS }];
+  // Beam timing; the end pad uses the same timing so it turns red right as the
+  // beam reaches it.
+  const timing = (i: number, si: number): React.CSSProperties =>
+    allCorners
+      ? { animationDelay: `${((i * 0.83 + si * 1.37) % 7).toFixed(2)}s`, animationDuration: `${5.5 + (i % 3) * 1.25}s` }
+      : { animationDelay: `${(i * 1.3 + si * 1.7) % 7}s`, animationDuration: `${6 + (i % 3) * 1.5}s` };
   // Unique per instance, since this can be on screen twice (site + intro).
   const glowId = `cwGlow-${useId().replace(/:/g, "")}`;
 
@@ -225,8 +271,8 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
 
       {/* Circuit layer */}
       <svg
-        viewBox="0 0 1440 900"
-        preserveAspectRatio="xMidYMid slice"
+        viewBox={allCorners ? `0 0 ${w} ${h}` : "0 0 1440 900"}
+        preserveAspectRatio={allCorners ? "none" : "xMidYMid slice"}
         className="absolute inset-0 h-full w-full"
       >
         {sets.map((set, si) => (
@@ -238,13 +284,6 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
               ))}
             </g>
 
-            {/* solder pads (one at every trace end) */}
-            <g fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1.2" opacity="0.28">
-              {set.pads.map(([x, y], i) => (
-                <circle key={i} cx={x} cy={y} r="4" />
-              ))}
-            </g>
-
             {/* crimson data pulses travelling along the traces */}
             <g className="cw-beams" fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter={`url(#${glowId})`}>
               {set.traces.map((d, i) => (
@@ -253,8 +292,15 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
                   d={d}
                   pathLength={100}
                   className="cw-pulse"
-                  style={{ animationDelay: `${(i * 1.3 + si * 1.7) % 7}s`, animationDuration: `${6 + (i % 3) * 1.5}s` }}
+                  style={timing(i, si)}
                 />
+              ))}
+            </g>
+
+            {/* solder pad at every trace end: turns red when the beam hits it */}
+            <g>
+              {set.pads.map(([x, y], i) => (
+                <circle key={i} cx={x} cy={y} r="4" className="cw-pad" style={timing(i, si)} />
               ))}
             </g>
           </g>

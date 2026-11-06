@@ -296,6 +296,24 @@ body {
   .cw-node { animation: none; }
 }
 
+/* Circuit end pads: dark chrome, flash red when the trace's beam reaches them.
+   Duration + delay are set inline to match that trace's beam. */
+.cw-pad {
+  fill: #0a0a0b;
+  stroke: #c9ccd1;
+  stroke-width: 1.2;
+  opacity: 0.35;
+  animation: cwPad 6s linear infinite;
+}
+@keyframes cwPad {
+  0%, 89% { fill: #0a0a0b; stroke: #c9ccd1; opacity: 0.35; }
+  92%, 98% { fill: #e11d2a; stroke: #ff3b3f; opacity: 1; }
+  100% { fill: #0a0a0b; stroke: #c9ccd1; opacity: 0.35; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cw-pad { animation: none; }
+}
+
 /* --- Speed streaks --- */
 @keyframes streak {
   0% { transform: translateX(-120%); opacity: 0; }
@@ -456,7 +474,7 @@ body {
 @keyframes cwPulse {
   0%   { stroke-dashoffset: 100; opacity: 0; }
   8%   { opacity: 0.85; }
-  85%  { opacity: 0.85; }
+  93%  { opacity: 0.85; }
   100% { stroke-dashoffset: 0; opacity: 0; }
 }
 .cw-dew {
