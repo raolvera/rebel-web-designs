@@ -160,7 +160,7 @@ const END_R = 170; // px from the screen center where the CENTER circuit stops
 // How far toward the center each circuit travels (tips 1..6). Staggered so the
 // ends spread out instead of lining up. 1 = all the way, 0.5 = half way.
 const SPREAD = [0.72, 0.95, 0.8, 1, 0.86, 0.97];
-const STEPS = 5; // left/right stair steps per circuit (each step adds 2 bends)
+const STEPS = 2; // left/right stair steps per circuit (each step adds 2 bends)
 const AVOID_PAD = 16; // px kept clear around the logo, words, pill and player
 const CENTER_GAP = 30; // px left between the left and right top/bottom-center circuits
 const EDGE_Y = 58; // px from the top (and bottom) edge for the top/bottom-center circuits
