@@ -50,8 +50,9 @@ const LIT_TIPS = [1, 2, 3, 4, 5, 6, 7];
 
 // Every red beam travels at this speed (screen px per second), so long and
 // short circuits, web spokes and web rings all move the same.
-const BEAM_SPEED = 120;
-const beamSecs = (px: number) => `${Math.max(0.8, px / BEAM_SPEED).toFixed(2)}s`;
+const BEAM_SPEED = 60;
+const MIN_BEAM_SECS = 2.5; // shortest cycle, so short lines don't flicker
+const beamSecs = (px: number) => `${Math.max(MIN_BEAM_SECS, px / BEAM_SPEED).toFixed(2)}s`;
 
 function CornerWeb({ className, flip, glowId, fit, lit, unitPx = 1 }: { className: string; flip: string; glowId: string; fit?: boolean; lit?: boolean; unitPx?: number }) {
   const S = 400;
@@ -535,7 +536,7 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   const centerRun = runs.find((r) => r.tip === 7);
   const centerLen = centerRun ? polyLen(centerRun.pts) : 0;
   const centerStartX = centerRun ? centerRun.pts[0][0] : 0;
-  const centerSecs = Math.max(0.8, centerLen / BEAM_SPEED);
+  const centerSecs = Math.max(MIN_BEAM_SECS, centerLen / BEAM_SPEED);
   type Sync = { pl: number; dur: number; delay: number } | null;
   const sets: { t?: string; traces: string[]; lens: number[]; pads: (Pt | null)[]; sync?: Sync[] }[] = allCorners
     ? mirrors.map((t, mi) => {
