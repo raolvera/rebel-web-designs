@@ -604,6 +604,11 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
 
       {/* Circuit layer */}
       <svg
+        // Redraw ALL circuit beams together whenever the layout changes, so
+        // every beam's animation starts at the same moment. (CSS animations
+        // count from when each line first appears; lines added later would
+        // run out of step and the joining beams wouldn't meet the center beam.)
+        key={allCorners ? `${w}|${h}|${webPx}|${centerLen.toFixed(1)}|${runs.length}` : "site"}
         viewBox={allCorners ? `0 0 ${w} ${h}` : "0 0 1440 900"}
         preserveAspectRatio={allCorners ? "none" : "xMidYMid slice"}
         className="absolute inset-0 h-full w-full"
