@@ -592,12 +592,11 @@ export default function MusicPlayer() {
   // Balanced height — fuller than 16:9 but not a tall strip. ~0.62x width.
   const vidH = Math.round(vidW * 0.62);
 
-  // Bigger, readable text when the large video window is open (still fits on
-  // phones: the card width is capped to the viewport and the title truncates).
-  const bigVid = showVideo && videoSize === "lg";
-  const titleSize = bigVid ? "text-base" : "text-[11px]";
-  const metaSize = bigVid ? "text-xs" : "text-[11px]";
-  const btnSize = bigVid ? "text-[11px]" : "text-[10px]";
+  // Bigger, readable text whenever the video window is open (scales up with the
+  // size; still fits on phones — the card width is capped and the title truncates).
+  const titleSize = !showVideo ? "text-[11px]" : videoSize === "lg" ? "text-lg" : videoSize === "md" ? "text-base" : "text-sm";
+  const metaSize = !showVideo ? "text-[11px]" : videoSize === "lg" ? "text-sm" : videoSize === "md" ? "text-xs" : "text-[11px]";
+  const btnSize = !showVideo ? "text-[10px]" : videoSize === "lg" ? "text-xs" : videoSize === "md" ? "text-[11px]" : "text-[10px]";
 
   // Rough height of the whole card so we can anchor it by its TOP and keep it
   // low on screen. Growing the video then expands the card DOWNWARD instead of

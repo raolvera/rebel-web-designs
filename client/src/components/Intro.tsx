@@ -24,7 +24,7 @@ export function isSideways(w: number, h: number) {
 // Spider-web separator for the ticker ribbons (ties into the CircuitWeb motif).
 function WebIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="none" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" strokeLinecap="round">
       <path d="M12 12L12 3M12 12L18.36 5.64M12 12L21 12M12 12L18.36 18.36M12 12L12 21M12 12L5.64 18.36M12 12L3 12M12 12L5.64 5.64M12 7L15.54 8.46L17 12L15.54 15.54L12 17L8.46 15.54L7 12L8.46 8.46ZM12 3L18.36 5.64L21 12L18.36 18.36L12 21L5.64 18.36L3 12L5.64 5.64Z" />
     </svg>
   );
@@ -209,7 +209,7 @@ export default function Intro() {
       <TickerBar pos="top" />
       <TickerBar pos="bottom" rev />
       {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
-      <CircuitWeb allCorners />
+      <CircuitWeb allCorners webSize="w-40 sm:w-64 lg:w-80" />
       <div className="pointer-events-none absolute inset-0 grid-floor" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blood/15 blur-[120px]" />
 
