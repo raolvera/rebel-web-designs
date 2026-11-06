@@ -531,15 +531,39 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   ];
   // Main site: the 1440x900 traces are scaled to cover the screen ("slice").
   const sliceScale = Math.max(window.innerWidth / 1440, window.innerHeight / 900);
-  const sets: { t?: string; traces: string[]; lens: number[]; pads: (Pt | null)[] }[] = allCorners
+  // the center circuit's beam, which the small joining beams sync to
+  const centerRun = runs.find((r) => r.tip === 7);
+  const centerLen = centerRun ? polyLen(centerRun.pts) : 0;
+  const centerStartX = centerRun ? centerRun.pts[0][0] : 0;
+  const centerSecs = Math.max(0.8, centerLen / BEAM_SPEED);
+  type Sync = { pl: number; dur: number; delay: number } | null;
+  const sets: { t?: string; traces: string[]; lens: number[]; pads: (Pt | null)[]; sync?: Sync[] }[] = allCorners
     ? mirrors.map((t, mi) => {
         // mirrors 2 and 3 are the bottom corners: on a wide screen they share
         // the center circuit with the top ones, so they skip it (drawn once)
         const mine = runs.filter((r) => !(mi >= 2 && sharedCenter && r.tip === 7));
+        // Sync the small joining beams to the center beam: each one fires so it
+        // reaches the center line at the exact moment the center beam passes
+        // that point. Both run at the same speed and share the center beam's
+        // cycle (the small line's dash finishes early, then waits), so it lines
+        // up every time, on both sides.
+        const side = mi % 2; // 0 = left webs, 1 = right webs
+        const dc = (side * 1.37) % 7; // the center beam's own delay (index 0 in its set)
+        const sync = mine.map((r) => {
+          if (!r.merge || !centerLen) return null;
+          const lm = polyLen(r.pts);
+          const joinX = r.pts[r.pts.length - 1][0] - centerStartX; // distance along the center line
+          return {
+            pl: (100 * lm) / centerLen, // dash keeps the same px size + speed
+            dur: centerSecs,
+            delay: dc + joinX / BEAM_SPEED - lm / BEAM_SPEED,
+          };
+        });
         return {
           t,
           traces: mine.map((r) => toPath(r.pts)),
           lens: mine.map((r) => polyLen(r.pts)),
+          sync,
           // the center circuit joins its mirror in the middle into one line, so
           // it has no end circle (only the circle at the web tip it starts from)
           // circuits that join the center line have no end circle either
@@ -550,9 +574,13 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   // Beam timing; the end pad uses the same timing so it turns red right as the
   // beam reaches it.
   // Every beam moves at the same speed: duration = path length / speed.
+  // (the center circuit is index 0 in sets 0 and 1, so its delay is
+  // (si * 1.37) % 7 - the small joining beams rely on that)
   const timing = (i: number, si: number, len: number): React.CSSProperties => ({
     animationDelay: `${(((i * 0.83 + si * 1.37) % 7)).toFixed(2)}s`,
-    animationDuration: beamSecs(len * (allCorners ? 1 : sliceScale)),
+    animationDuration: allCorners && i === 0 && si < 2 && centerRun
+      ? `${centerSecs.toFixed(3)}s`
+      : beamSecs(len * (allCorners ? 1 : sliceScale)),
   });
   // px per web viewBox unit (webs are 400 units): intro webs are webPx wide;
   // main-site webs are roughly 400px (w-56 / sm:w-80 / lg:w-[26rem])
@@ -595,9 +623,14 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
                 <path
                   key={i}
                   d={d}
-                  pathLength={100}
-                  className="cw-pulse"
-                  style={timing(i, si, set.lens[i])}
+                  pathLength={set.sync?.[i]?.pl ?? 100}
+                  className={set.sync?.[i] ? "cw-pulse cw-pulse-sync" : "cw-pulse"}
+                  style={(() => {
+                    const s = set.sync?.[i];
+                    return s
+                      ? { animationDelay: `${s.delay.toFixed(3)}s`, animationDuration: `${s.dur.toFixed(3)}s` }
+                      : timing(i, si, set.lens[i]);
+                  })()}
                 />
               ))}
             </g>
