@@ -284,6 +284,24 @@ body {
   background-position: calc(50% + 24px) calc(50% + 24px);
 }
 
+/* Web tip nodes: a dark chrome pad that fills red when the beam reaches it.
+   Duration + delay are set inline to match that spoke's beam. */
+.cw-node {
+  fill: #0a0a0b;
+  stroke: #c9ccd1;
+  stroke-width: 1.2;
+  opacity: 0.55;
+  animation: cwNode 5s linear infinite;
+}
+@keyframes cwNode {
+  0%, 88% { fill: #0a0a0b; stroke: #c9ccd1; opacity: 0.55; filter: none; }
+  92%, 97% { fill: #e11d2a; stroke: #ff3b3f; opacity: 1; filter: drop-shadow(0 0 5px rgba(225, 29, 42, 0.9)); }
+  100% { fill: #0a0a0b; stroke: #c9ccd1; opacity: 0.55; filter: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cw-node { animation: none; }
+}
+
 /* --- Speed streaks --- */
 @keyframes streak {
   0% { transform: translateX(-120%); opacity: 0; }

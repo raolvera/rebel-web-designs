@@ -39,12 +39,20 @@ function webPaths(size: number, spokes: number, rings: number) {
     }
     ringDs.push(d);
   }
-  return { spokeDs, ringDs };
+  const tips = angles.map((a) => at(a, size));
+  return { spokeDs, ringDs, tips, angles };
 }
 
-function CornerWeb({ className, flip, glowId, fit }: { className: string; flip: string; glowId: string; fit?: boolean }) {
+// Spokes whose tips get a node that fills red when the beam arrives (some, not
+// all). 1 = upper tip (a circuit drops out of it), 7 = the tip on the screen
+// edge where the two webs on that side meet (the center-line circuit).
+const LIT_TIPS = [1, 7];
+// Spoke angle (deg) of tip 1, so circuits can start exactly at that tip.
+const TIP1_ANGLE = (90 / 7) * 1 + 2.5;
+
+function CornerWeb({ className, flip, glowId, fit, lit }: { className: string; flip: string; glowId: string; fit?: boolean; lit?: boolean }) {
   const S = 400;
-  const { spokeDs, ringDs } = webPaths(S, 8, 7);
+  const { spokeDs, ringDs, tips } = webPaths(S, 8, 7);
   // Beams on every spoke, and on alternating rings so it isn't too busy.
   const beamRings = ringDs.filter((_, i) => i % 2 === 1);
   return (
@@ -53,7 +61,7 @@ function CornerWeb({ className, flip, glowId, fit }: { className: string; flip: 
       className={className}
       // fit: exactly half the screen's width or height (whichever is smaller),
       // so the web's edge spokes in neighbouring corners meet in the middle.
-      style={{ transform: flip, ...(fit ? { width: "min(50vw, 50vh)" } : null) }}
+      style={{ transform: flip, ...(fit ? { width: "min(50vw, 50vh)" } : null), ...(lit ? { overflow: "visible" } : null) }}
     >
       {/* silver silk (same chrome as the circuit traces) */}
       <g fill="none" stroke="#c9ccd1" strokeLinecap="round">
@@ -89,6 +97,20 @@ function CornerWeb({ className, flip, glowId, fit }: { className: string; flip: 
           />
         ))}
       </g>
+
+      {/* tip nodes: dark chrome pads that fill red the moment the beam reaches
+          them (same delay + duration as that spoke's beam, so they stay in sync) */}
+      {lit &&
+        LIT_TIPS.map((i) => (
+          <circle
+            key={`n${i}`}
+            cx={tips[i][0]}
+            cy={tips[i][1]}
+            r="5.5"
+            className="cw-node"
+            style={{ animationDelay: `${(i * 0.9) % 6}s`, animationDuration: `${5 + (i % 3)}s` }}
+          />
+        ))}
     </svg>
   );
 }
@@ -137,15 +159,78 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       window.removeEventListener("orientationchange", on);
     };
   }, [allCorners]);
-  // Center-line circuit in screen px (origin = screen center). It starts at the
-  // left screen edge (where the web tips meet), runs to the first bend, jogs
-  // over one grid square, and ends at the -11 mark.
+  // Intro circuits, in screen px with the origin at the screen center. They are
+  // drawn for the top-left quarter and mirrored/flipped into the other three,
+  // so every side is identical. Each one starts exactly at a web tip.
   const U = GRID_U;
-  const edge = -vp.w / 2;
+  const W = vp.w / 2;
+  const H = vp.h / 2;
+  const S = Math.min(W, H); // the corner webs are S x S (see CornerWeb "fit")
+
+  // 1) Tip 7 (on the screen edge, where the two webs on that side meet): the
+  //    center-line circuit. Runs in, jogs over one grid square, ends at -11.
+  const edge = -W;
+  const y0 = S - H; // = 0 (the center line) on a landscape screen
   const bend = Math.max(edge, -14 * U);
-  const centerTrace = `M${edge} 0 H${bend} L${bend + U} ${-U} H${-12 * U} L${-11 * U} 0`;
+  const lens = `M${edge} ${y0} H${bend} L${bend + U} ${y0 - U} H${-12 * U} L${-11 * U} ${y0}`;
+  const lensPad: Pt = [-11 * U, y0];
+
+  // 2) Tip 1 (upper tip): a short circuit that drops out of it and jogs AWAY
+  //    from center. Only drawn when the screen is wide enough that it stays
+  //    clear of the widest (large) music player, top and bottom alike, so the
+  //    four corners always match.
+  const a1 = (TIP1_ANGLE * Math.PI) / 180;
+  const tx = -W + S * Math.cos(a1);
+  const ty = -H + S * Math.sin(a1);
+  const PLAYER_HALF = 230 + 36; // widest player half-width + breathing room
+  const showDrop = W - S * Math.cos(a1) >= PLAYER_HALF;
+  const drop = `M${tx} ${ty} V${ty + U} L${tx - U} ${ty + 2 * U} V${ty + 3 * U}`;
+  const dropPad: Pt = [tx - U, ty + 3 * U];
+
+  // 3) Fillers: rows every 2 grid squares that come out of the web's outer ring
+  //    (or the screen edge where the web doesn't reach) and run toward center,
+  //    stopping on a grid mark just outside the widest player. This fills the
+  //    empty space beside the webs; on bigger screens there is room for more.
+  //    Odd rows get a 45-degree jog away from center. A row is skipped if it is
+  //    too short or would run into the drop circuit above.
+  const stopX = -Math.ceil(PLAYER_HALF / U) * U; // grid mark just outside the player
+  const ringR = 0.9 * S; // the web's outer silk ring
+  const dropBox = showDrop ? { x0: tx - U - 16, x1: tx + 16, y0: ty - 16, y1: ty + 3 * U + 16 } : null;
+  const fillTraces: string[] = [];
+  const fillPads: Pt[] = [];
+  if (allCorners) {
+    for (let k = 1; ; k++) {
+      const y = -2 * U * k;
+      if (-y > H - 56) break; // stay clear of the top ticker bar
+      const dy = y + H; // distance below the top edge
+      const x0 = dy >= ringR ? -W : -W + Math.sqrt(ringR * ringR - dy * dy);
+      // odd rows jog up (away from center) if the jog stays outside the web
+      let j = k % 2 === 1 ? -U : 0;
+      if (j !== 0) {
+        const jx = stopX - U + W; // distance from the left edge
+        const jy = y + j + H; // distance from the top edge
+        if (Math.hypot(jx, jy) < S * 1.02) j = 0;
+      }
+      if (stopX - x0 < 2 * U) continue; // too short to be worth drawing
+      const yTop = Math.min(y, y + j) - 8;
+      const yBot = Math.max(y, y + j) + 8;
+      if (dropBox && x0 < dropBox.x1 && stopX > dropBox.x0 && yTop < dropBox.y1 && yBot > dropBox.y0) continue;
+      if (j !== 0 && stopX - x0 >= 4 * U) {
+        fillTraces.push(`M${x0} ${y} H${stopX - 2 * U} L${stopX - U} ${y + j} H${stopX}`);
+        fillPads.push([stopX, y + j]);
+      } else {
+        fillTraces.push(`M${x0} ${y} H${stopX}`);
+        fillPads.push([stopX, y]);
+      }
+    }
+  }
+
   const sets: { t?: string; traces: string[]; pads: Pt[] }[] = allCorners
-    ? GRID_MIRRORS.map((t) => ({ t, traces: [centerTrace], pads: [[-11 * U, 0]] as Pt[] }))
+    ? GRID_MIRRORS.map((t) => ({
+        t,
+        traces: [lens, ...(showDrop ? [drop] : []), ...fillTraces],
+        pads: [lensPad, ...(showDrop ? [dropPad] : []), ...fillPads],
+      }))
     : [{ traces: TRACES, pads: PADS }];
   // Unique per instance, since this can be on screen twice (site + intro).
   const glowId = `cwGlow-${useId().replace(/:/g, "")}`;
@@ -203,12 +288,12 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       </svg>
 
       {/* Circuit spiderwebs in opposite corners (all four on the locked intro) */}
-      <CornerWeb glowId={glowId} fit={allCorners} className={`absolute left-0 top-0 ${webSize} ${allCorners ? "opacity-50" : "opacity-60"}`} flip="none" />
-      <CornerWeb glowId={glowId} fit={allCorners} className={`absolute bottom-0 right-0 ${webSize} opacity-50`} flip="rotate(180deg)" />
+      <CornerWeb glowId={glowId} fit={allCorners} lit={allCorners} className={`absolute left-0 top-0 ${webSize} ${allCorners ? "opacity-50" : "opacity-60"}`} flip="none" />
+      <CornerWeb glowId={glowId} fit={allCorners} lit={allCorners} className={`absolute bottom-0 right-0 ${webSize} opacity-50`} flip="rotate(180deg)" />
       {allCorners && (
         <>
-          <CornerWeb glowId={glowId} fit className={`absolute right-0 top-0 ${webSize} opacity-50`} flip="scaleX(-1)" />
-          <CornerWeb glowId={glowId} fit className={`absolute bottom-0 left-0 ${webSize} opacity-50`} flip="scaleY(-1)" />
+          <CornerWeb glowId={glowId} fit lit className={`absolute right-0 top-0 ${webSize} opacity-50`} flip="scaleX(-1)" />
+          <CornerWeb glowId={glowId} fit lit className={`absolute bottom-0 left-0 ${webSize} opacity-50`} flip="scaleY(-1)" />
         </>
       )}
 
