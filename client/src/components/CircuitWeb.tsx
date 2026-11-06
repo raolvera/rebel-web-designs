@@ -164,9 +164,9 @@ const STEPS = 2; // left/right stair steps per circuit (each step adds 2 bends)
 const AVOID_PAD = 16; // px kept clear around the logo, words, pill and player
 // Tips that connect straight down onto the center circuit (the two nearest it).
 const MERGE_AT: Record<number, number> = { 6: 1, 5: 1 };
-// px each circuit stops short of its full length, by tip (0..4), so the end
-// circles are offset from each other instead of lining up. 0 = no offset.
-const END_STAGGER = [0, 46, 14, 64, 28];
+// px each circuit stops short of its full length (in order), so the end
+// circles are offset from each other instead of lining up. 0 = full length.
+const END_STAGGER = [0, 30, 8, 42, 16, 24];
 const PILL_GAP = 20; // px between the center circuit's end circle and the Coming Soon pill
 const TOP_AIM = 54; // px from the top the highest circuit aims for (smaller = higher; bottom mirrors it)
 const CENTER_GAP = 30; // px left between the left and right top/bottom-center circuits
@@ -387,6 +387,7 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   const runs: { tip: number; pts: Pt[]; merge?: boolean }[] = [];
   if (allCorners) {
     const taken: [Pt, Pt][] = []; // segments already drawn (to avoid crossings)
+    let staggerIdx = 0; // which END_STAGGER offset the next circuit gets
     // Components to stay clear of, plus their mirror images: the circuits are
     // mirrored into all four corners, so this keeps every corner identical.
     const mirrored = (pad: number): Box[] => {
@@ -457,11 +458,15 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       // so it uses a tighter clearance to make it across as one line
       pts = stopBeforeBoxes(pts, c.tip === 7 ? avoidTight : avoid, 0);
       pts = stopBeforeHit(pts, taken, 10);
-      // stagger the end points a little so the end circles don't line up
-      const pull = c.tip === 7 ? 0 : END_STAGGER[c.tip % END_STAGGER.length];
-      if (pull > 0) {
+      // Stagger the end points so the end circles don't line up in a row:
+      // every other circuit stops a bit short, by varied amounts. Works on
+      // short circuits too (e.g. phones, or a big player cutting them off).
+      if (c.tip !== 7) {
         const len = polyLen(pts);
-        if (len > pull + 60) pts = cutAt(pts, (len - pull) / len);
+        // never take more than ~45% off, so short circuits still show but
+        // are offset too
+        const pull = Math.min(END_STAGGER[staggerIdx++ % END_STAGGER.length], len * 0.45);
+        if (pull > 2 && len - pull >= 14) pts = cutAt(pts, (len - pull) / len);
       }
       if (polyLen(pts) < 60) continue; // too short to draw (avoids stubs by the center line)
       for (let i = 1; i < pts.length; i++) taken.push([pts[i - 1], pts[i]]);
