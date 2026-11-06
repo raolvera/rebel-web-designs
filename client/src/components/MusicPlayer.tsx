@@ -618,7 +618,7 @@ export default function MusicPlayer() {
     : { left: 24, top: defaultTop, zIndex: 50 };
 
   return (
-    <div ref={cardRef} className="fixed" style={cardStyle}>
+    <div ref={cardRef} data-circuit-avoid className="fixed" style={cardStyle}>
         {/* The card is ALWAYS mounted, so the music never stops. Its smallest
             size is the standard audio-only player; minimize just closes the video. */}
         <div

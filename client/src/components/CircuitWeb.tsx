@@ -132,8 +132,8 @@ const PADS: Pt[] = [
 ];
 
 // ---------------- Locked intro circuits ----------------
-// Every circuit comes out of a web tip and heads for the screen center (one
-// 45deg turn, then straight in), ending in a solder pad that flashes red when
+// Every circuit grows straight out of a web tip, then turns once and aims
+// directly at the screen center, ending in a solder pad that flashes red when
 // its beam arrives.
 // Drawn for the top-left web and mirrored/flipped into the other three corners,
 // so left = right and top = bottom.
@@ -142,10 +142,11 @@ const PADS: Pt[] = [
 //   tip   = which spoke of the web it comes out of. 1 is the tip nearest the
 //           top edge; 7 is the tip on the side edge where the two webs on that
 //           side meet (that one is the CENTER circuit, on the center line).
-//   reach = how far toward the screen center it runs: 1 = all the way (stops
-//           CENTER_GAP px short of the middle), 0.5 = half way, 0.25 = a quarter.
+//   reach = how much of its full length it draws: 1 = the whole way (stops
+//           END_R px from the screen center), 0.5 = half way, 0.25 = a quarter.
 //           Delete a line to remove that circuit.
 const TIP_CIRCUITS: { tip: number; reach: number }[] = [
+  { tip: 0, reach: 1 }, // top edge tip -> top center (bottom webs: bottom center)
   { tip: 1, reach: 1 },
   { tip: 2, reach: 1 },
   { tip: 3, reach: 1 },
@@ -154,8 +155,70 @@ const TIP_CIRCUITS: { tip: number; reach: number }[] = [
   { tip: 6, reach: 1 },
   { tip: 7, reach: 1 }, // center circuit
 ];
-const CENTER_GAP = 30; // px kept clear at the middle of the screen
-const LANE = 14; // px between neighbouring circuits where they arrive at the center
+const TIP_EXT = 40; // px each circuit continues straight out of its tip before turning
+const END_R = 170; // px from the screen center where the CENTER circuit stops
+// How far toward the center each circuit travels (tips 1..6). Staggered so the
+// ends spread out instead of lining up. 1 = all the way, 0.5 = half way.
+const SPREAD = [0.72, 0.95, 0.8, 1, 0.86, 0.97];
+const STEPS = 5; // left/right stair steps per circuit (each step adds 2 bends)
+const AVOID_PAD = 16; // px kept clear around the logo, words, pill and player
+const CENTER_GAP = 30; // px left between the left and right top/bottom-center circuits
+const EDGE_Y = 58; // px from the top (and bottom) edge for the top/bottom-center circuits
+
+// Octilinear stair-steps from a to b: straight, 45deg, straight, 45deg...
+function stairs(a: Pt, b: Pt, n: number): Pt[] {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const sx = Math.sign(dx);
+  const sy = Math.sign(dy);
+  const lo = Math.min(Math.abs(dx), Math.abs(dy));
+  const hi = Math.max(Math.abs(dx), Math.abs(dy));
+  const diag = lo / n; // 45deg part of each step
+  const flat = (hi - lo) / n; // straight part of each step
+  const out: Pt[] = [];
+  let [x, y] = a;
+  for (let i = 0; i < n; i++) {
+    if (Math.abs(dx) >= Math.abs(dy)) x += sx * flat;
+    else y += sy * flat;
+    out.push([x, y]);
+    x += sx * diag;
+    y += sy * diag;
+    out.push([x, y]);
+  }
+  out[out.length - 1] = b;
+  return out;
+}
+
+// Where segment p-q hits segment a-b (as a 0..1 position along p-q), if it does.
+function segHit(p: Pt, q: Pt, a: Pt, b: Pt): number | null {
+  const rx = q[0] - p[0];
+  const ry = q[1] - p[1];
+  const sx = b[0] - a[0];
+  const sy = b[1] - a[1];
+  const den = rx * sy - ry * sx;
+  if (Math.abs(den) < 1e-9) return null;
+  const t = ((a[0] - p[0]) * sy - (a[1] - p[1]) * sx) / den;
+  const u = ((a[0] - p[0]) * ry - (a[1] - p[1]) * rx) / den;
+  return t >= 0 && t <= 1 && u >= 0 && u <= 1 ? t : null;
+}
+
+// Stop a circuit `gap` px before it would run into one that's already drawn.
+function stopBeforeHit(pts: Pt[], taken: [Pt, Pt][], gap: number): Pt[] {
+  let walked = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i - 1];
+    const q = pts[i];
+    const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    let first: number | null = null;
+    for (const [a, b] of taken) {
+      const t = segHit(p, q, a, b);
+      if (t !== null && (first === null || t < first)) first = t;
+    }
+    if (first !== null) return cutAt(pts, Math.max(0, (walked + first * len - gap) / polyLen(pts)));
+    walked += len;
+  }
+  return pts;
+}
 
 // Length of a polyline, and the same polyline cut to a fraction of its length.
 function polyLen(pts: Pt[]) {
@@ -185,20 +248,95 @@ function cutAt(pts: Pt[], frac: number): Pt[] {
 // Spoke tip positions for a web of size 1 (multiply by the web's size in px).
 const UNIT_TIPS = webPaths(1, 8, 7).tips;
 
-// Screen size (the intro circuits are drawn in real screen px).
-function useViewport(on: boolean) {
-  const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+type Box = { l: number; t: number; r: number; b: number };
+
+// Screen size + the boxes of everything marked data-circuit-avoid (logo, words,
+// the Coming Soon pill, buttons, the music player), in screen px. Re-measures on
+// resize, when the player changes size, and after the intro animations settle.
+function useAvoidBoxes(on: boolean) {
+  const [state, setState] = useState<{ w: number; h: number; boxes: Box[] }>(() => ({
+    w: window.innerWidth,
+    h: window.innerHeight,
+    boxes: [],
+  }));
   useEffect(() => {
     if (!on) return;
-    const update = () => setVp({ w: window.innerWidth, h: window.innerHeight });
-    window.addEventListener("resize", update);
-    window.addEventListener("orientationchange", update);
+    let raf = 0;
+    const measure = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const boxes: Box[] = [];
+        document.querySelectorAll<HTMLElement>("[data-circuit-avoid]").forEach((el) => {
+          const r = el.getBoundingClientRect();
+          if (r.width && r.height) boxes.push({ l: r.left, t: r.top, r: r.right, b: r.bottom });
+        });
+        setState({ w: window.innerWidth, h: window.innerHeight, boxes });
+      });
+    };
+    const timers: number[] = [];
+    const measureSoon = () => {
+      measure();
+      timers.push(window.setTimeout(measure, 350)); // after the 0.2s scale transition
+    };
+    measure();
+    [400, 1600, 2600].forEach((ms) => timers.push(window.setTimeout(measure, ms)));
+    const ro = new ResizeObserver(measureSoon);
+    document.querySelectorAll("[data-circuit-avoid]").forEach((el) => ro.observe(el));
+    window.addEventListener("resize", measureSoon);
+    window.addEventListener("orientationchange", measureSoon);
+    window.addEventListener("rebel-player-size", measureSoon);
     return () => {
-      window.removeEventListener("resize", update);
-      window.removeEventListener("orientationchange", update);
+      cancelAnimationFrame(raf);
+      timers.forEach((t) => window.clearTimeout(t));
+      ro.disconnect();
+      window.removeEventListener("resize", measureSoon);
+      window.removeEventListener("orientationchange", measureSoon);
+      window.removeEventListener("rebel-player-size", measureSoon);
     };
   }, [on]);
-  return vp;
+  return state;
+}
+
+// Where segment p-q first enters box b (0..1 along p-q), or null if it never does.
+function enterBox(p: Pt, q: Pt, b: Box): number | null {
+  let t0 = 0;
+  let t1 = 1;
+  const dx = q[0] - p[0];
+  const dy = q[1] - p[1];
+  const edges: [number, number][] = [
+    [-dx, p[0] - b.l],
+    [dx, b.r - p[0]],
+    [-dy, p[1] - b.t],
+    [dy, b.b - p[1]],
+  ];
+  for (const [pp, qq] of edges) {
+    if (pp === 0) {
+      if (qq < 0) return null;
+    } else {
+      const r = qq / pp;
+      if (pp < 0) t0 = Math.max(t0, r);
+      else t1 = Math.min(t1, r);
+    }
+  }
+  return t0 <= t1 ? t0 : null;
+}
+
+// Stop a circuit `gap` px before it would touch any of the boxes.
+function stopBeforeBoxes(pts: Pt[], boxes: Box[], gap: number): Pt[] {
+  let walked = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const p = pts[i - 1];
+    const q = pts[i];
+    const len = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    let first: number | null = null;
+    for (const b of boxes) {
+      const t = enterBox(p, q, b);
+      if (t !== null && (first === null || t < first)) first = t;
+    }
+    if (first !== null) return cutAt(pts, Math.max(0, (walked + first * len - gap) / polyLen(pts)));
+    walked += len;
+  }
+  return pts;
 }
 
 const toPath = (pts: Pt[]) => pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
@@ -208,28 +346,66 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   // sized to the screen instead, so neighbours meet exactly in the middle.
   const webSize = allCorners ? "" : "w-56 sm:w-80 lg:w-[26rem]";
   // Intro: circuits out of the web tips, in real screen px.
-  const { w, h } = useViewport(!!allCorners);
+  const { w, h, boxes } = useAvoidBoxes(!!allCorners);
   const webPx = Math.min(w / 2, h / 2); // the corner webs are this size (CornerWeb "fit")
   // On a wide screen the top and bottom webs share tip 7 on the center line, so
   // the bottom copies skip it (otherwise the center circuit is drawn twice).
   const sharedCenter = Math.abs(webPx - h / 2) < 1;
-  // Each circuit heads for the screen center: out of its tip on a 45deg
-  // diagonal, then straight in. They arrive stacked in lanes LANE px apart
-  // (tip 7 on the center line), so none of them overlap or cross.
-  const tipRuns = (bottom: boolean): Pt[][] =>
-    TIP_CIRCUITS.filter((c) => UNIT_TIPS[c.tip] && !(bottom && sharedCenter && c.tip === 7))
-      .map((c): Pt[] => {
-        const px = UNIT_TIPS[c.tip][0] * webPx;
-        const py = UNIT_TIPS[c.tip][1] * webPx;
-        const ex = w / 2 - CENTER_GAP;
-        const ey = h / 2 - (7 - c.tip) * LANE - (sharedCenter ? 0 : LANE / 2);
-        const dx = ex - px;
-        const dy = ey - py;
-        const d = Math.min(Math.abs(dx), Math.abs(dy));
-        const turn: Pt = [px + Math.sign(dx) * d, py + Math.sign(dy) * d];
-        return cutAt([[px, py], turn, [ex, ey]], c.reach);
-      })
-      .filter((p) => polyLen(p) >= 12); // too short to draw
+  // Each circuit grows straight out of its tip (continuing the spoke's own
+  // direction for TIP_EXT px), then stair-steps toward the screen center
+  // (straight, 45deg, straight, 45deg...), ending at a staggered distance so
+  // the ends spread out over the empty space. Built once for the top-left web;
+  // the other corners are mirror copies, so it stays even.
+  const cx = w / 2;
+  const cy = h / 2;
+  const runs: { tip: number; pts: Pt[] }[] = [];
+  if (allCorners) {
+    const taken: [Pt, Pt][] = []; // segments already drawn (to avoid crossings)
+    // Components to stay clear of, plus their mirror images: the circuits are
+    // mirrored into all four corners, so this keeps every corner identical.
+    const avoid: Box[] = [];
+    for (const b of boxes) {
+      const g = { l: b.l - AVOID_PAD, t: b.t - AVOID_PAD, r: b.r + AVOID_PAD, b: b.b + AVOID_PAD };
+      avoid.push(
+        g,
+        { l: w - g.r, r: w - g.l, t: g.t, b: g.b },
+        { l: g.l, r: g.r, t: h - g.b, b: h - g.t },
+        { l: w - g.r, r: w - g.l, t: h - g.b, b: h - g.t },
+      );
+    }
+    // center circuit first so it always stays whole, then tips 1..6
+    const rank = (t: number) => (t === 7 ? -2 : t === 0 ? -1 : t); // center, edge, then the rest
+    const order = [...TIP_CIRCUITS].sort((a, b) => rank(a.tip) - rank(b.tip));
+    for (const c of order) {
+      if (!UNIT_TIPS[c.tip]) continue;
+      const [ux, uy] = UNIT_TIPS[c.tip]; // tip position for a size-1 web = spoke direction
+      const p: Pt = [ux * webPx, uy * webPx];
+      // straight out of the tip, but never past the center lines (tip 7 lies
+      // on the screen edge pointing along it, so it turns at the tip)
+      let ext = c.tip === 7 ? 0 : TIP_EXT;
+      if (uy > 0) ext = Math.min(ext, (cy - 14 - p[1]) / uy);
+      if (ux > 0) ext = Math.min(ext, (cx - 14 - p[0]) / ux);
+      ext = Math.max(0, ext);
+      const turn: Pt = [p[0] + ux * ext, p[1] + uy * ext];
+      const dist = Math.hypot(cx - turn[0], cy - turn[1]);
+      let end: Pt;
+      if (c.tip === 0) {
+        // tip 0 sits on the top edge: run along under the ticker to top center
+        // (its bottom-corner copies run to bottom center)
+        if (cx - CENTER_GAP - turn[0] < 40) continue; // web already reaches the center
+        end = [cx - CENTER_GAP, EDGE_Y];
+      } else {
+        const share = c.tip === 7 ? Math.max(0, 1 - END_R / dist) : SPREAD[(c.tip - 1) % SPREAD.length];
+        end = [turn[0] + (cx - turn[0]) * share, turn[1] + (cy - turn[1]) * share];
+      }
+      let pts = cutAt([p, turn, ...stairs(turn, end, STEPS)], c.reach);
+      pts = stopBeforeBoxes(pts, avoid, 0);
+      pts = stopBeforeHit(pts, taken, 10);
+      if (polyLen(pts) < 24) continue; // too short to draw
+      for (let i = 1; i < pts.length; i++) taken.push([pts[i - 1], pts[i]]);
+      runs.push({ tip: c.tip, pts });
+    }
+  }
   const mirrors: (string | undefined)[] = [
     undefined, // top-left
     `translate(${w} 0) scale(-1 1)`, // top-right
@@ -238,8 +414,10 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   ];
   const sets: { t?: string; traces: string[]; pads: Pt[] }[] = allCorners
     ? mirrors.map((t, mi) => {
-        const runs = tipRuns(mi >= 2); // mirrors 2 and 3 are the bottom corners
-        return { t, traces: runs.map(toPath), pads: runs.map((p) => p[p.length - 1]) };
+        // mirrors 2 and 3 are the bottom corners: on a wide screen they share
+        // the center circuit with the top ones, so they skip it (drawn once)
+        const mine = runs.filter((r) => !(mi >= 2 && sharedCenter && r.tip === 7)).map((r) => r.pts);
+        return { t, traces: mine.map(toPath), pads: mine.map((p) => p[p.length - 1]) };
       })
     : [{ traces: TRACES, pads: PADS }];
   // Beam timing; the end pad uses the same timing so it turns red right as the
