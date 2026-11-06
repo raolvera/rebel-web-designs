@@ -203,12 +203,12 @@ export default function Intro() {
         style={{ transform: `scale(${scale})`, transformOrigin: "top center", transition: "transform 0.2s ease" }}
       >
 
-      <div data-circuit-avoid className="intro-logo relative">
+      <div className="intro-logo relative">
         <RwdMark size={bigPlayer ? 115 : 150} />
       </div>
 
       {/* "Fuel your fire with" ABOVE the wordmark */}
-      <p data-circuit-avoid className={`intro-tagline mt-6 font-display font-semibold uppercase tracking-[0.35em] text-ash ${bigPlayer ? "text-base sm:text-xl" : "text-sm sm:text-base"}`}>
+      <p className={`intro-tagline mt-6 font-display font-semibold uppercase tracking-[0.35em] text-ash ${bigPlayer ? "text-base sm:text-xl" : "text-sm sm:text-base"}`}>
         Fuel your{" "}
         <span className="fire-wrap" data-text="fire">
           <span className="fire-text">fire</span>
@@ -216,7 +216,6 @@ export default function Intro() {
         with
       </p>
       <h1
-        data-circuit-avoid
         data-text="REBEL WEB DESIGNS"
         className={`glitch glitch-auto intro-word rwd-word relative mt-2 max-w-full whitespace-nowrap px-2 text-center font-display font-bold text-silver ${
           sideways
@@ -227,18 +226,18 @@ export default function Intro() {
         REBEL WEB DESIGNS
       </h1>
 
-      <span data-circuit-avoid className={`intro-tagline mt-6 rounded-full border border-blood/60 bg-blood/10 px-5 py-2 font-display font-bold uppercase tracking-[0.3em] text-ember shadow-glow ${bigPlayer ? "text-base sm:text-lg" : "text-sm"}`}>
+      <span className={`intro-tagline mt-6 rounded-full border border-blood/60 bg-blood/10 px-5 py-2 font-display font-bold uppercase tracking-[0.3em] text-ember shadow-glow ${bigPlayer ? "text-base sm:text-lg" : "text-sm"}`}>
         Coming Soon
       </span>
 
       {LOCKED ? (
-        <p data-circuit-avoid className={`mt-8 px-6 text-center text-ash ${bigPlayer ? "max-w-lg text-base sm:text-lg" : "max-w-md text-sm"}`}>
+        <p className={`mt-8 px-6 text-center text-ash ${bigPlayer ? "max-w-lg text-base sm:text-lg" : "max-w-md text-sm"}`}>
           Something iconic is being built. Full-stack web development, UX/UI, and graphic
           design services launching soon!
         </p>
       ) : (
         <>
-          <p data-circuit-avoid className="mt-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-silver">
+          <p className="mt-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-silver">
             <span className="h-1.5 w-1.5 rounded-full bg-ember pulse-dot" />
             Press play on the player to start the music
           </p>
@@ -248,7 +247,6 @@ export default function Intro() {
               if (holdTimer.current) clearTimeout(holdTimer.current);
               finish(true);
             }}
-            data-circuit-avoid
             className="mt-6 rounded-sm border border-silver/30 px-6 py-2 font-display text-sm font-semibold text-silver transition hover:border-silver/60"
           >
             Skip intro →
