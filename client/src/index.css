@@ -278,6 +278,12 @@ body {
     radial-gradient(ellipse 80% 60% at 50% 100%, black 30%, transparent 75%);
 }
 
+/* Intro: put a grid line exactly on the screen center (and every 48px out from
+   it) so the circuits can be placed on grid marks like -11 / +11. */
+.grid-center {
+  background-position: calc(50% + 24px) calc(50% + 24px);
+}
+
 /* --- Speed streaks --- */
 @keyframes streak {
   0% { transform: translateX(-120%); opacity: 0; }

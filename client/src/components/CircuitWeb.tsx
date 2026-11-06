@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useId, useState } from "react";
 
 /**
  * Decorative site background: spiderwebs wired like circuitry + chrome circuit
@@ -111,28 +111,41 @@ const PADS: Pt[] = [
   [800, 680], [1300, 800], [300, 760], [260, 140], [1180, 220],
 ];
 
-// Locked intro: ONE top-left quadrant of traces, mirrored into all four
-// corners so the circuits are perfectly symmetric (right = mirror of left,
-// bottom = flip of top). Every trace ends in a solder pad.
-const QUAD_TRACES: string[] = [
-  "M0 140 H260 L300 180 H520 L560 140 H700",
-  "M0 320 H240 L280 360 H520 L560 320 V220",
-  "M420 0 V70 L460 110 H600",
-];
-const QUAD_PADS: Pt[] = [[700, 140], [560, 220], [600, 110]];
-const MIRRORS = [
-  undefined, // top-left
-  "translate(1440 0) scale(-1 1)", // top-right (mirror)
-  "translate(0 900) scale(1 -1)", // bottom-left (flip)
-  "translate(1440 900) scale(-1 -1)", // bottom-right (mirror + flip)
-];
+// Locked intro: the circuit sits on the SAME 48px grid as the background grid
+// lines, with (0,0) at the screen center. It comes out of the web tips: the two
+// corner webs on each side meet at the middle of the screen edge, and the
+// center-line circuit starts exactly there (no long line across the webs) and
+// ends in a solder pad 11 grid squares from center (-11 left, +11 right), well
+// clear of the large music player. Mirrored/flipped so left = right and the
+// top and bottom halves form a small "<>" shape.
+const GRID_U = 48;
+const GRID_MIRRORS = [undefined, "scale(-1 1)", "scale(1 -1)", "scale(-1 -1)"];
 
 export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   // Original web size on the main site. On the intro (allCorners) the webs are
   // sized to the screen instead, so neighbours meet exactly in the middle.
   const webSize = allCorners ? "" : "w-56 sm:w-80 lg:w-[26rem]";
+  // Screen size, so the grid-based circuits stay 1:1 with the CSS grid lines.
+  const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
+  useEffect(() => {
+    if (!allCorners) return;
+    const on = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    window.addEventListener("resize", on);
+    window.addEventListener("orientationchange", on);
+    return () => {
+      window.removeEventListener("resize", on);
+      window.removeEventListener("orientationchange", on);
+    };
+  }, [allCorners]);
+  // Center-line circuit in screen px (origin = screen center). It starts at the
+  // left screen edge (where the web tips meet), runs to the first bend, jogs
+  // over one grid square, and ends at the -11 mark.
+  const U = GRID_U;
+  const edge = -vp.w / 2;
+  const bend = Math.max(edge, -14 * U);
+  const centerTrace = `M${edge} 0 H${bend} L${bend + U} ${-U} H${-12 * U} L${-11 * U} 0`;
   const sets: { t?: string; traces: string[]; pads: Pt[] }[] = allCorners
-    ? MIRRORS.map((t) => ({ t, traces: QUAD_TRACES, pads: QUAD_PADS }))
+    ? GRID_MIRRORS.map((t) => ({ t, traces: [centerTrace], pads: [[-11 * U, 0]] as Pt[] }))
     : [{ traces: TRACES, pads: PADS }];
   // Unique per instance, since this can be on screen twice (site + intro).
   const glowId = `cwGlow-${useId().replace(/:/g, "")}`;
@@ -153,8 +166,8 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
 
       {/* Circuit layer */}
       <svg
-        viewBox="0 0 1440 900"
-        preserveAspectRatio="xMidYMid slice"
+        viewBox={allCorners ? `${-vp.w / 2} ${-vp.h / 2} ${vp.w} ${vp.h}` : "0 0 1440 900"}
+        preserveAspectRatio={allCorners ? "xMidYMid meet" : "xMidYMid slice"}
         className="absolute inset-0 h-full w-full"
       >
         {sets.map((set, si) => (
