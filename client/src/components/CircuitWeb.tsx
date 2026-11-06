@@ -51,9 +51,9 @@ function CornerWeb({ className, flip, glowId, fit }: { className: string; flip: 
     <svg
       viewBox={`0 0 ${S} ${S}`}
       className={className}
-      // fit: never wider than 46% of the screen width or height, so webs in
-      // neighbouring corners can't touch (full original size when there's room).
-      style={{ transform: flip, ...(fit ? { maxWidth: "min(46vw, 46vh)" } : null) }}
+      // fit: exactly half the screen's width or height (whichever is smaller),
+      // so the web's edge spokes in neighbouring corners meet in the middle.
+      style={{ transform: flip, ...(fit ? { width: "min(50vw, 50vh)" } : null) }}
     >
       {/* silver silk (same chrome as the circuit traces) */}
       <g fill="none" stroke="#c9ccd1" strokeLinecap="round">
@@ -111,8 +111,29 @@ const PADS: Pt[] = [
   [800, 680], [1300, 800], [300, 760], [260, 140], [1180, 220],
 ];
 
+// Locked intro: ONE top-left quadrant of traces, mirrored into all four
+// corners so the circuits are perfectly symmetric (right = mirror of left,
+// bottom = flip of top). Every trace ends in a solder pad.
+const QUAD_TRACES: string[] = [
+  "M0 140 H260 L300 180 H520 L560 140 H700",
+  "M0 320 H240 L280 360 H520 L560 320 V220",
+  "M420 0 V70 L460 110 H600",
+];
+const QUAD_PADS: Pt[] = [[700, 140], [560, 220], [600, 110]];
+const MIRRORS = [
+  undefined, // top-left
+  "translate(1440 0) scale(-1 1)", // top-right (mirror)
+  "translate(0 900) scale(1 -1)", // bottom-left (flip)
+  "translate(1440 900) scale(-1 -1)", // bottom-right (mirror + flip)
+];
+
 export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
-  const webSize = "w-56 sm:w-80 lg:w-[26rem]"; // original size
+  // Original web size on the main site. On the intro (allCorners) the webs are
+  // sized to the screen instead, so neighbours meet exactly in the middle.
+  const webSize = allCorners ? "" : "w-56 sm:w-80 lg:w-[26rem]";
+  const sets: { t?: string; traces: string[]; pads: Pt[] }[] = allCorners
+    ? MIRRORS.map((t) => ({ t, traces: QUAD_TRACES, pads: QUAD_PADS }))
+    : [{ traces: TRACES, pads: PADS }];
   // Unique per instance, since this can be on screen twice (site + intro).
   const glowId = `cwGlow-${useId().replace(/:/g, "")}`;
 
@@ -136,41 +157,45 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
         preserveAspectRatio="xMidYMid slice"
         className="absolute inset-0 h-full w-full"
       >
-        {/* static chrome traces */}
-        <g fill="none" stroke="#c9ccd1" strokeWidth="1.2" strokeLinejoin="round" opacity="0.13">
-          {TRACES.map((d, i) => (
-            <path key={i} d={d} />
-          ))}
-        </g>
+        {sets.map((set, si) => (
+          <g key={si} transform={set.t}>
+            {/* static chrome traces */}
+            <g fill="none" stroke="#c9ccd1" strokeWidth="1.2" strokeLinejoin="round" opacity="0.13">
+              {set.traces.map((d, i) => (
+                <path key={i} d={d} />
+              ))}
+            </g>
 
-        {/* solder pads */}
-        <g fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1.2" opacity="0.28">
-          {PADS.map(([x, y], i) => (
-            <circle key={i} cx={x} cy={y} r="4" />
-          ))}
-        </g>
+            {/* solder pads (one at every trace end) */}
+            <g fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1.2" opacity="0.28">
+              {set.pads.map(([x, y], i) => (
+                <circle key={i} cx={x} cy={y} r="4" />
+              ))}
+            </g>
 
-        {/* crimson data pulses travelling along the traces */}
-        <g className="cw-beams" fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter={`url(#${glowId})`}>
-          {TRACES.map((d, i) => (
-            <path
-              key={i}
-              d={d}
-              pathLength={100}
-              className="cw-pulse"
-              style={{ animationDelay: `${(i * 1.3) % 7}s`, animationDuration: `${6 + (i % 3) * 1.5}s` }}
-            />
-          ))}
-        </g>
+            {/* crimson data pulses travelling along the traces */}
+            <g className="cw-beams" fill="none" stroke="#e11d2a" strokeWidth="2" strokeLinecap="round" filter={`url(#${glowId})`}>
+              {set.traces.map((d, i) => (
+                <path
+                  key={i}
+                  d={d}
+                  pathLength={100}
+                  className="cw-pulse"
+                  style={{ animationDelay: `${(i * 1.3 + si * 1.7) % 7}s`, animationDuration: `${6 + (i % 3) * 1.5}s` }}
+                />
+              ))}
+            </g>
+          </g>
+        ))}
       </svg>
 
       {/* Circuit spiderwebs in opposite corners (all four on the locked intro) */}
-      <CornerWeb glowId={glowId} fit={allCorners} className={`absolute left-0 top-0 ${webSize} opacity-60`} flip="none" />
+      <CornerWeb glowId={glowId} fit={allCorners} className={`absolute left-0 top-0 ${webSize} ${allCorners ? "opacity-50" : "opacity-60"}`} flip="none" />
       <CornerWeb glowId={glowId} fit={allCorners} className={`absolute bottom-0 right-0 ${webSize} opacity-50`} flip="rotate(180deg)" />
       {allCorners && (
         <>
           <CornerWeb glowId={glowId} fit className={`absolute right-0 top-0 ${webSize} opacity-50`} flip="scaleX(-1)" />
-          <CornerWeb glowId={glowId} fit className={`absolute bottom-0 left-0 ${webSize} opacity-40`} flip="scaleY(-1)" />
+          <CornerWeb glowId={glowId} fit className={`absolute bottom-0 left-0 ${webSize} opacity-50`} flip="scaleY(-1)" />
         </>
       )}
 

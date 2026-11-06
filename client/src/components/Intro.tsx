@@ -24,7 +24,7 @@ export function isSideways(w: number, h: number) {
 // Spider-web separator for the ticker ribbons (ties into the CircuitWeb motif).
 function WebIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="none" stroke="currentColor" strokeWidth="1" strokeLinejoin="round" strokeLinecap="round">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="none" stroke="currentColor" strokeWidth="0.6" strokeLinejoin="round" strokeLinecap="round">
       <path d="M12 12L12 3M12 12L18.36 5.64M12 12L21 12M12 12L18.36 18.36M12 12L12 21M12 12L5.64 18.36M12 12L3 12M12 12L5.64 5.64M12 7L15.54 8.46L17 12L15.54 15.54L12 17L8.46 15.54L7 12L8.46 8.46ZM12 3L18.36 5.64L21 12L18.36 18.36L12 21L5.64 18.36L3 12L5.64 5.64Z" />
     </svg>
   );
@@ -65,29 +65,6 @@ function TickerBar({ pos, rev }: { pos: "top" | "bottom"; rev?: boolean }) {
         ))}
       </div>
     </div>
-  );
-}
-
-// Faint static circuit traces — a tad more of the motif on the locked intro,
-// no extra animation cost.
-function StaticCircuits() {
-  const traces = [
-    "M0 320 H240 L280 360 H520 L560 320 V220",
-    "M1440 600 H1200 L1160 560 H980 L940 520 V440",
-    "M0 760 H200 L240 720 H460",
-    "M1440 120 H1240 L1200 160 H1040 L1000 120 V60",
-    "M620 0 V120 L660 160 H820",
-  ];
-  const pads: [number, number][] = [[560, 220], [940, 440], [460, 720], [1000, 60], [820, 160]];
-  return (
-    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" fill="none" aria-hidden="true">
-      <g stroke="#c9ccd1" strokeWidth="1.1" strokeLinejoin="round" opacity="0.08">
-        {traces.map((d, i) => <path key={i} d={d} />)}
-      </g>
-      <g fill="#0a0a0b" stroke="#c9ccd1" strokeWidth="1.1" opacity="0.16">
-        {pads.map(([x, y], i) => <circle key={i} cx={x} cy={y} r="3.5" />)}
-      </g>
-    </svg>
   );
 }
 
@@ -153,6 +130,10 @@ export default function Intro() {
   // The NASDAQ-style ticker ribbons pinned to the very top and bottom of the intro.
   const TICKER_H = 40;
   const sideways = isSideways(vw, vh);
+  // Video window open at md/lg: the content gets scaled down to fit above the
+  // player, so bump the small text up (and trim the logo) to keep it readable.
+  // Based on the player's height, not the content's, so it can't flip-flop.
+  const bigPlayer = playerH > 340;
   const reserved = sideways ? 12 + TICKER_H : playerH + 8 + 20 + TICKER_H; // bottom ticker + player
   const padRight = sideways ? playerW + 20 : 0; // space kept clear for the player
   const roomyTop = vh * (sideways ? 0.04 : 0.08);
@@ -213,9 +194,6 @@ export default function Intro() {
       <div className="pointer-events-none absolute inset-0 grid-floor" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blood/15 blur-[120px]" />
 
-      {/* A tad more circuits on the locked intro (faint + static, no extra
-          animation cost). The extra corner webs come from allCorners above. */}
-      <StaticCircuits />
 
       {/* Outer box takes the SCALED height so nothing below gets pushed down */}
       <div className="relative w-full shrink-0" style={{ height: contentH ? contentH * scale : undefined }}>
@@ -226,11 +204,11 @@ export default function Intro() {
       >
 
       <div className="intro-logo relative">
-        <RwdMark size={150} />
+        <RwdMark size={bigPlayer ? 115 : 150} />
       </div>
 
       {/* "Fuel your fire with" ABOVE the wordmark */}
-      <p className="intro-tagline mt-6 font-display text-sm font-semibold uppercase tracking-[0.35em] text-ash sm:text-base">
+      <p className={`intro-tagline mt-6 font-display font-semibold uppercase tracking-[0.35em] text-ash ${bigPlayer ? "text-base sm:text-xl" : "text-sm sm:text-base"}`}>
         Fuel your{" "}
         <span className="fire-wrap" data-text="fire">
           <span className="fire-text">fire</span>
@@ -248,12 +226,12 @@ export default function Intro() {
         REBEL WEB DESIGNS
       </h1>
 
-      <span className="intro-tagline mt-6 rounded-full border border-blood/60 bg-blood/10 px-5 py-2 font-display text-sm font-bold uppercase tracking-[0.3em] text-ember shadow-glow">
+      <span className={`intro-tagline mt-6 rounded-full border border-blood/60 bg-blood/10 px-5 py-2 font-display font-bold uppercase tracking-[0.3em] text-ember shadow-glow ${bigPlayer ? "text-base sm:text-lg" : "text-sm"}`}>
         Coming Soon
       </span>
 
       {LOCKED ? (
-        <p className="mt-8 max-w-md px-6 text-center text-sm text-ash">
+        <p className={`mt-8 px-6 text-center text-ash ${bigPlayer ? "max-w-lg text-base sm:text-lg" : "max-w-md text-sm"}`}>
           Something iconic is being built. Full-stack web development, UX/UI, and graphic
           design services launching soon!
         </p>
