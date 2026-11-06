@@ -278,12 +278,6 @@ body {
     radial-gradient(ellipse 80% 60% at 50% 100%, black 30%, transparent 75%);
 }
 
-/* Intro: put a grid line exactly on the screen center (and every 48px out from
-   it) so the circuits can be placed on grid marks like -11 / +11. */
-.grid-center {
-  background-position: calc(50% + 24px) calc(50% + 24px);
-}
-
 /* Web tip nodes: a dark chrome pad that fills red when the beam reaches it.
    Duration + delay are set inline to match that spoke's beam. */
 .cw-node {

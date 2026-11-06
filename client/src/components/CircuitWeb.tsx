@@ -44,11 +44,9 @@ function webPaths(size: number, spokes: number, rings: number) {
 }
 
 // Spokes whose tips get a node that fills red when the beam arrives (some, not
-// all). 1 = upper tip (a circuit drops out of it), 7 = the tip on the screen
-// edge where the two webs on that side meet (the center-line circuit).
+// all): 1 = an upper tip, 7 = the tip on the screen edge where the two webs on
+// that side meet.
 const LIT_TIPS = [1, 7];
-// Spoke angle (deg) of tip 1, so circuits can start exactly at that tip.
-const TIP1_ANGLE = (90 / 7) * 1 + 2.5;
 
 function CornerWeb({ className, flip, glowId, fit, lit }: { className: string; flip: string; glowId: string; fit?: boolean; lit?: boolean }) {
   const S = 400;
@@ -133,21 +131,55 @@ const PADS: Pt[] = [
   [800, 680], [1300, 800], [300, 760], [260, 140], [1180, 220],
 ];
 
-// Locked intro: the circuit sits on the SAME 48px grid as the background grid
-// lines, with (0,0) at the screen center. It comes out of the web tips: the two
-// corner webs on each side meet at the middle of the screen edge, and the
-// center-line circuit starts exactly there (no long line across the webs) and
-// ends in a solder pad 11 grid squares from center (-11 left, +11 right), well
-// clear of the large music player. Mirrored/flipped so left = right and the
-// top and bottom halves form a small "<>" shape.
-const GRID_U = 48;
-const GRID_MIRRORS = [undefined, "scale(-1 1)", "scale(1 -1)", "scale(-1 -1)"];
+// Locked intro: the original PCB look (right angles + 45deg notches, long runs
+// in from the screen edge, a solder pad at every end), but built EVEN: one
+// top-left quarter of the 1440x900 space, mirrored/flipped through the center
+// into all four corners so left = right and top = bottom. Rows are staggered so
+// it reads as a dense bus rather than a grid. The last row sits on the center
+// line, where its flipped copy turns it into a "<>" shape.
+const QUAD: Pt[][] = [];
+for (let k = 0; k < 5; k++) {
+  const y = 60 + 70 * k;
+  const a = 100 + 40 * (k % 3); // where the notch starts (staggered per row)
+  const b = a + 120;
+  const e = b + 25 + 60; // row end (a solder pad goes here)
+  QUAD.push([[0, y], [a, y], [a + 22, y + 22], [b, y + 22], [b + 22, y], [e, y]]);
+}
+QUAD.push([[0, 450], [150, 450], [172, 428], [300, 428], [322, 450], [390, 450]]);
+
+// Mirror/flip about the center (720,450) of the 1440x900 space.
+const QUAD_MIRRORS = [
+  undefined, // top-left
+  "translate(1440 0) scale(-1 1)", // top-right
+  "translate(0 900) scale(1 -1)", // bottom-left
+  "translate(1440 900) scale(-1 -1)", // bottom-right
+];
+
+// Cut a polyline off at x = xmax (keeps the part nearest the screen edge).
+function clipX(pts: Pt[], xmax: number): Pt[] {
+  const out: Pt[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    if (p[0] <= xmax) {
+      out.push(p);
+      continue;
+    }
+    if (i > 0 && pts[i - 1][0] <= xmax) {
+      const q = pts[i - 1];
+      const t = (xmax - q[0]) / (p[0] - q[0]);
+      out.push([xmax, q[1] + t * (p[1] - q[1])]);
+    }
+    break;
+  }
+  return out;
+}
+const toPath = (pts: Pt[]) => pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(" ");
 
 export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   // Original web size on the main site. On the intro (allCorners) the webs are
   // sized to the screen instead, so neighbours meet exactly in the middle.
   const webSize = allCorners ? "" : "w-56 sm:w-80 lg:w-[26rem]";
-  // Screen size, so the grid-based circuits stay 1:1 with the CSS grid lines.
+  // Screen size, so the intro circuits can be trimmed to stay clear of the player.
   const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
     if (!allCorners) return;
@@ -159,77 +191,19 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       window.removeEventListener("orientationchange", on);
     };
   }, [allCorners]);
-  // Intro circuits, in screen px with the origin at the screen center. They are
-  // drawn for the top-left quarter and mirrored/flipped into the other three,
-  // so every side is identical. Each one starts exactly at a web tip.
-  const U = GRID_U;
-  const W = vp.w / 2;
-  const H = vp.h / 2;
-  const S = Math.min(W, H); // the corner webs are S x S (see CornerWeb "fit")
-
-  // 1) Tip 7 (on the screen edge, where the two webs on that side meet): the
-  //    center-line circuit. Runs in, jogs over one grid square, ends at -11.
-  const edge = -W;
-  const y0 = S - H; // = 0 (the center line) on a landscape screen
-  const bend = Math.max(edge, -14 * U);
-  const lens = `M${edge} ${y0} H${bend} L${bend + U} ${y0 - U} H${-12 * U} L${-11 * U} ${y0}`;
-  const lensPad: Pt = [-11 * U, y0];
-
-  // 2) Tip 1 (upper tip): a short circuit that drops out of it and jogs AWAY
-  //    from center. Only drawn when the screen is wide enough that it stays
-  //    clear of the widest (large) music player, top and bottom alike, so the
-  //    four corners always match.
-  const a1 = (TIP1_ANGLE * Math.PI) / 180;
-  const tx = -W + S * Math.cos(a1);
-  const ty = -H + S * Math.sin(a1);
-  const PLAYER_HALF = 230 + 36; // widest player half-width + breathing room
-  const showDrop = W - S * Math.cos(a1) >= PLAYER_HALF;
-  const drop = `M${tx} ${ty} V${ty + U} L${tx - U} ${ty + 2 * U} V${ty + 3 * U}`;
-  const dropPad: Pt = [tx - U, ty + 3 * U];
-
-  // 3) Fillers: rows every 2 grid squares that come out of the web's outer ring
-  //    (or the screen edge where the web doesn't reach) and run toward center,
-  //    stopping on a grid mark just outside the widest player. This fills the
-  //    empty space beside the webs; on bigger screens there is room for more.
-  //    Odd rows get a 45-degree jog away from center. A row is skipped if it is
-  //    too short or would run into the drop circuit above.
-  const stopX = -Math.ceil(PLAYER_HALF / U) * U; // grid mark just outside the player
-  const ringR = 0.9 * S; // the web's outer silk ring
-  const dropBox = showDrop ? { x0: tx - U - 16, x1: tx + 16, y0: ty - 16, y1: ty + 3 * U + 16 } : null;
-  const fillTraces: string[] = [];
-  const fillPads: Pt[] = [];
-  if (allCorners) {
-    for (let k = 1; ; k++) {
-      const y = -2 * U * k;
-      if (-y > H - 56) break; // stay clear of the top ticker bar
-      const dy = y + H; // distance below the top edge
-      const x0 = dy >= ringR ? -W : -W + Math.sqrt(ringR * ringR - dy * dy);
-      // odd rows jog up (away from center) if the jog stays outside the web
-      let j = k % 2 === 1 ? -U : 0;
-      if (j !== 0) {
-        const jx = stopX - U + W; // distance from the left edge
-        const jy = y + j + H; // distance from the top edge
-        if (Math.hypot(jx, jy) < S * 1.02) j = 0;
-      }
-      if (stopX - x0 < 2 * U) continue; // too short to be worth drawing
-      const yTop = Math.min(y, y + j) - 8;
-      const yBot = Math.max(y, y + j) + 8;
-      if (dropBox && x0 < dropBox.x1 && stopX > dropBox.x0 && yTop < dropBox.y1 && yBot > dropBox.y0) continue;
-      if (j !== 0 && stopX - x0 >= 4 * U) {
-        fillTraces.push(`M${x0} ${y} H${stopX - 2 * U} L${stopX - U} ${y + j} H${stopX}`);
-        fillPads.push([stopX, y + j]);
-      } else {
-        fillTraces.push(`M${x0} ${y} H${stopX}`);
-        fillPads.push([stopX, y]);
-      }
-    }
-  }
-
+  // The 1440x900 circuit space is scaled to FILL the screen ("slice"), so one
+  // viewBox unit = s screen px. Cut every trace off before it gets within
+  // (widest player half-width + breathing room) of the screen center, so the
+  // circuits never touch the music player, even large. Same cut on all four
+  // corners, so it stays even.
+  const s = Math.max(vp.w / 1440, vp.h / 900);
+  const xLimit = 720 - (230 + 36) / s;
+  const quad = QUAD.map((p) => clipX(p, xLimit)).filter((p) => p.length >= 2);
   const sets: { t?: string; traces: string[]; pads: Pt[] }[] = allCorners
-    ? GRID_MIRRORS.map((t) => ({
+    ? QUAD_MIRRORS.map((t) => ({
         t,
-        traces: [lens, ...(showDrop ? [drop] : []), ...fillTraces],
-        pads: [lensPad, ...(showDrop ? [dropPad] : []), ...fillPads],
+        traces: quad.map(toPath),
+        pads: quad.map((p) => p[p.length - 1]),
       }))
     : [{ traces: TRACES, pads: PADS }];
   // Unique per instance, since this can be on screen twice (site + intro).
@@ -251,8 +225,8 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
 
       {/* Circuit layer */}
       <svg
-        viewBox={allCorners ? `${-vp.w / 2} ${-vp.h / 2} ${vp.w} ${vp.h}` : "0 0 1440 900"}
-        preserveAspectRatio={allCorners ? "xMidYMid meet" : "xMidYMid slice"}
+        viewBox="0 0 1440 900"
+        preserveAspectRatio="xMidYMid slice"
         className="absolute inset-0 h-full w-full"
       >
         {sets.map((set, si) => (
