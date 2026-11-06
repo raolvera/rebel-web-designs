@@ -314,6 +314,20 @@ body {
   .cw-pad { animation: none; }
 }
 
+/* Small beams synced to the center beam: they only run for the first part of
+   the shared cycle (then sit past the end of their short line), so they skip
+   the fade-in/out and stay fully lit while moving. */
+.cw-pulse.cw-pulse-sync {
+  animation-name: cwPulseSync;
+}
+@keyframes cwPulseSync {
+  0% { stroke-dashoffset: 100; opacity: 0.85; }
+  100% { stroke-dashoffset: 0; opacity: 0.85; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cw-pulse.cw-pulse-sync { animation: none; opacity: 0; }
+}
+
 /* --- Speed streaks --- */
 @keyframes streak {
   0% { transform: translateX(-120%); opacity: 0; }
