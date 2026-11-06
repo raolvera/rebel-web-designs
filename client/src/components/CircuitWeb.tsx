@@ -152,16 +152,15 @@ const TIP_CIRCUITS: { tip: number; reach: number }[] = [
   { tip: 3, reach: 1 },
   { tip: 4, reach: 1 },
   { tip: 5, reach: 1 },
-  { tip: 6, reach: 1 },
   { tip: 7, reach: 1 }, // center circuit
 ];
 const TIP_EXT = 40; // px each circuit continues straight out of its tip before turning
-const END_R = 170; // px from the screen center where the CENTER circuit stops
 // How far toward the center each circuit travels (tips 1..6). Staggered so the
 // ends spread out instead of lining up. 1 = all the way, 0.5 = half way.
 const SPREAD = [0.72, 0.95, 0.8, 1, 0.86, 0.97];
 const STEPS = 2; // left/right stair steps per circuit (each step adds 2 bends)
 const AVOID_PAD = 16; // px kept clear around the logo, words, pill and player
+const TOP_AIM = 54; // px from the top the highest circuit aims for (smaller = higher; bottom mirrors it)
 const CENTER_GAP = 30; // px left between the left and right top/bottom-center circuits
 const EDGE_Y = 58; // px from the top (and bottom) edge for the top/bottom-center circuits
 
@@ -363,16 +362,21 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
     const taken: [Pt, Pt][] = []; // segments already drawn (to avoid crossings)
     // Components to stay clear of, plus their mirror images: the circuits are
     // mirrored into all four corners, so this keeps every corner identical.
-    const avoid: Box[] = [];
-    for (const b of boxes) {
-      const g = { l: b.l - AVOID_PAD, t: b.t - AVOID_PAD, r: b.r + AVOID_PAD, b: b.b + AVOID_PAD };
-      avoid.push(
-        g,
-        { l: w - g.r, r: w - g.l, t: g.t, b: g.b },
-        { l: g.l, r: g.r, t: h - g.b, b: h - g.t },
-        { l: w - g.r, r: w - g.l, t: h - g.b, b: h - g.t },
-      );
-    }
+    const mirrored = (pad: number): Box[] => {
+      const out: Box[] = [];
+      for (const b of boxes) {
+        const g = { l: b.l - pad, t: b.t - pad, r: b.r + pad, b: b.b + pad };
+        out.push(
+          g,
+          { l: w - g.r, r: w - g.l, t: g.t, b: g.b },
+          { l: g.l, r: g.r, t: h - g.b, b: h - g.t },
+          { l: w - g.r, r: w - g.l, t: h - g.b, b: h - g.t },
+        );
+      }
+      return out;
+    };
+    const avoid = mirrored(AVOID_PAD);
+    const avoidTight = mirrored(4);
     // center circuit first so it always stays whole, then tips 1..6
     const rank = (t: number) => (t === 7 ? -2 : t === 0 ? -1 : t); // center, edge, then the rest
     const order = [...TIP_CIRCUITS].sort((a, b) => rank(a.tip) - rank(b.tip));
@@ -387,7 +391,6 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       if (ux > 0) ext = Math.min(ext, (cx - 14 - p[0]) / ux);
       ext = Math.max(0, ext);
       const turn: Pt = [p[0] + ux * ext, p[1] + uy * ext];
-      const dist = Math.hypot(cx - turn[0], cy - turn[1]);
       let end: Pt;
       if (c.tip === 0) {
         // tip 0 sits on the top edge: run along under the ticker to top center
@@ -395,13 +398,23 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
         if (cx - CENTER_GAP - turn[0] < 40) continue; // web already reaches the center
         end = [cx - CENTER_GAP, EDGE_Y];
       } else {
-        const share = c.tip === 7 ? Math.max(0, 1 - END_R / dist) : SPREAD[(c.tip - 1) % SPREAD.length];
-        end = [turn[0] + (cx - turn[0]) * share, turn[1] + (cy - turn[1]) * share];
+        // the center circuit runs all the way to the middle, so the left and
+        // right ones meet and join into one line across the screen
+        const share = c.tip === 7 ? 1 : SPREAD[(c.tip - 1) % SPREAD.length];
+        // Aim height: tip 1 (highest) aims near the top, lower tips aim
+        // progressively lower, tip 7 aims at the center line. The bottom copies
+        // mirror this, so they go lower by the same amount (stays even).
+        const ty = c.tip === 7 ? cy : TOP_AIM + (cy - TOP_AIM) * ((c.tip - 1) / 6);
+        // every circuit reaches its full aim height (so the top one goes right
+        // up under the ticker); `share` only sets how far across it runs
+        end = c.tip === 7 ? [cx, cy] : [turn[0] + (cx - turn[0]) * share, ty];
       }
       let pts = cutAt([p, turn, ...stairs(turn, end, STEPS)], c.reach);
-      pts = stopBeforeBoxes(pts, avoid, 0);
+      // the center circuit threads the gap between the pill and the paragraph,
+      // so it uses a tighter clearance to make it across as one line
+      pts = stopBeforeBoxes(pts, c.tip === 7 ? avoidTight : avoid, 0);
       pts = stopBeforeHit(pts, taken, 10);
-      if (polyLen(pts) < 24) continue; // too short to draw
+      if (polyLen(pts) < 60) continue; // too short to draw (avoids stubs by the center line)
       for (let i = 1; i < pts.length; i++) taken.push([pts[i - 1], pts[i]]);
       runs.push({ tip: c.tip, pts });
     }
@@ -412,12 +425,18 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
     `translate(0 ${h}) scale(1 -1)`, // bottom-left
     `translate(${w} ${h}) scale(-1 -1)`, // bottom-right
   ];
-  const sets: { t?: string; traces: string[]; pads: Pt[] }[] = allCorners
+  const sets: { t?: string; traces: string[]; pads: (Pt | null)[] }[] = allCorners
     ? mirrors.map((t, mi) => {
         // mirrors 2 and 3 are the bottom corners: on a wide screen they share
         // the center circuit with the top ones, so they skip it (drawn once)
-        const mine = runs.filter((r) => !(mi >= 2 && sharedCenter && r.tip === 7)).map((r) => r.pts);
-        return { t, traces: mine.map(toPath), pads: mine.map((p) => p[p.length - 1]) };
+        const mine = runs.filter((r) => !(mi >= 2 && sharedCenter && r.tip === 7));
+        return {
+          t,
+          traces: mine.map((r) => toPath(r.pts)),
+          // the center circuit joins its mirror in the middle into one line, so
+          // it has no end circle (only the circle at the web tip it starts from)
+          pads: mine.map((r) => (r.tip === 7 ? null : r.pts[r.pts.length - 1])),
+        };
       })
     : [{ traces: TRACES, pads: PADS }];
   // Beam timing; the end pad uses the same timing so it turns red right as the
@@ -473,9 +492,9 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
 
             {/* solder pad at every trace end: turns red when the beam hits it */}
             <g>
-              {set.pads.map(([x, y], i) => (
-                <circle key={i} cx={x} cy={y} r="4" className="cw-pad" style={timing(i, si)} />
-              ))}
+              {set.pads.map((pt, i) =>
+                pt ? <circle key={i} cx={pt[0]} cy={pt[1]} r="4" className="cw-pad" style={timing(i, si)} /> : null,
+              )}
             </g>
           </g>
         ))}
