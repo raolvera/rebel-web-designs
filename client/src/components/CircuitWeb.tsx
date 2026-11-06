@@ -56,6 +56,7 @@ function CornerWeb({ className, flip, glowId, fit, lit }: { className: string; f
   return (
     <svg
       viewBox={`0 0 ${S} ${S}`}
+      data-circuit-web={fit ? "" : undefined}
       className={className}
       // fit: exactly half the screen's width or height (whichever is smaller),
       // so the web's edge spokes in neighbouring corners meet in the middle.
@@ -161,9 +162,11 @@ const TIP_EXT = 40; // px each circuit continues straight out of its tip before 
 const SPREAD = [0.72, 0.95, 0.8, 1, 0.86, 0.97];
 const STEPS = 2; // left/right stair steps per circuit (each step adds 2 bends)
 const AVOID_PAD = 16; // px kept clear around the logo, words, pill and player
-// Tips that join the center circuit, and how far in (as a share of the web's
-// size) they land on it. Tip 6 must land before tip 5 so they don't cross.
-const MERGE_AT: Record<number, number> = { 6: 0.25, 5: 0.42 };
+// Tips that connect straight down onto the center circuit (the two nearest it).
+const MERGE_AT: Record<number, number> = { 6: 1, 5: 1 };
+// px each circuit stops short of its full length, by tip (0..4), so the end
+// circles are offset from each other instead of lining up. 0 = no offset.
+const END_STAGGER = [0, 46, 14, 64, 28];
 const PILL_GAP = 20; // px between the center circuit's end circle and the Coming Soon pill
 const TOP_AIM = 54; // px from the top the highest circuit aims for (smaller = higher; bottom mirrors it)
 const CENTER_GAP = 30; // px left between the left and right top/bottom-center circuits
@@ -258,9 +261,10 @@ type Box = { l: number; t: number; r: number; b: number };
 // the Coming Soon pill, buttons, the music player), in screen px. Re-measures on
 // resize, when the player changes size, and after the intro animations settle.
 function useAvoidBoxes(on: boolean) {
-  const [state, setState] = useState<{ w: number; h: number; boxes: Box[]; pill: Box | null }>(() => ({
+  const [state, setState] = useState<{ w: number; h: number; webPx: number; boxes: Box[]; pill: Box | null }>(() => ({
     w: window.innerWidth,
     h: window.innerHeight,
+    webPx: 0,
     boxes: [],
     pill: null,
   }));
@@ -279,7 +283,19 @@ function useAvoidBoxes(on: boolean) {
         const pe = document.querySelector<HTMLElement>("[data-circuit-pill]");
         const pr = pe?.getBoundingClientRect();
         const pill = pr && pr.width ? { l: pr.left, t: pr.top, r: pr.right, b: pr.bottom } : null;
-        setState({ w: window.innerWidth, h: window.innerHeight, boxes, pill });
+        // Measure the REAL drawing area and web size. The webs are sized in CSS
+        // (50vw/50vh), which can differ from window.innerWidth/innerHeight
+        // (phone address bars, scrollbars); using the measured sizes keeps
+        // every circuit starting exactly on its web tip.
+        const root = document.querySelector<HTMLElement>("[data-circuit-root]")?.getBoundingClientRect();
+        const web = document.querySelector<SVGElement>("[data-circuit-web]")?.getBoundingClientRect();
+        setState({
+          w: root?.width || window.innerWidth,
+          h: root?.height || window.innerHeight,
+          webPx: web?.width || 0,
+          boxes,
+          pill,
+        });
       });
     };
     const timers: number[] = [];
@@ -290,7 +306,7 @@ function useAvoidBoxes(on: boolean) {
     measure();
     [400, 1600, 2600].forEach((ms) => timers.push(window.setTimeout(measure, ms)));
     const ro = new ResizeObserver(measureSoon);
-    document.querySelectorAll("[data-circuit-avoid]").forEach((el) => ro.observe(el));
+    document.querySelectorAll("[data-circuit-avoid], [data-circuit-root], [data-circuit-web]").forEach((el) => ro.observe(el));
     window.addEventListener("resize", measureSoon);
     window.addEventListener("orientationchange", measureSoon);
     window.addEventListener("rebel-player-size", measureSoon);
@@ -355,11 +371,12 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   // sized to the screen instead, so neighbours meet exactly in the middle.
   const webSize = allCorners ? "" : "w-56 sm:w-80 lg:w-[26rem]";
   // Intro: circuits out of the web tips, in real screen px.
-  const { w, h, boxes, pill } = useAvoidBoxes(!!allCorners);
-  const webPx = Math.min(w / 2, h / 2); // the corner webs are this size (CornerWeb "fit")
+  const { w, h, boxes, pill, webPx: measuredWeb } = useAvoidBoxes(!!allCorners);
+  // the corner webs' real on-screen size (falls back to the CSS formula)
+  const webPx = measuredWeb || Math.min(w / 2, h / 2);
   // On a wide screen the top and bottom webs share tip 7 on the center line, so
   // the bottom copies skip it (otherwise the center circuit is drawn twice).
-  const sharedCenter = Math.abs(webPx - h / 2) < 1;
+  const sharedCenter = Math.abs(webPx - h / 2) < 2;
   // Each circuit grows straight out of its tip (continuing the spoke's own
   // direction for TIP_EXT px), then stair-steps toward the screen center
   // (straight, 45deg, straight, 45deg...), ending at a staggered distance so
@@ -394,17 +411,17 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       if (!UNIT_TIPS[c.tip]) continue;
       const [ux, uy] = UNIT_TIPS[c.tip]; // tip position for a size-1 web = spoke direction
       const p: Pt = [ux * webPx, uy * webPx];
-      // The two tips nearest the center line join INTO the center circuit:
-      // straight out, then a 45deg bend that lands on the center line. Tip 6
-      // joins first and tip 5 further in, so they never cross. The bottom webs
-      // mirror this, so each join forms a "Y".
+      // The two tips nearest the center line join INTO the center circuit with
+      // one straight line each.
       const join = MERGE_AT[c.tip];
       if (join !== undefined && sharedCenter) {
-        const jx = p[0] + webPx * join; // where it lands on the center line
-        const bend = Math.max(p[0], jx - (cy - p[1]));
-        const pts: Pt[] = [p, [bend, p[1]], [jx, cy]];
-        for (let i = 1; i < pts.length; i++) taken.push([pts[i - 1], pts[i]]);
-        runs.push({ tip: c.tip, pts, merge: true });
+        // one straight line from the tip directly onto the center line (no
+        // bends); the bottom web's mirror copy meets it from below
+        if (cy - p[1] > 2) {
+          const pts: Pt[] = [p, [p[0], cy]];
+          taken.push([pts[0], pts[1]]);
+          runs.push({ tip: c.tip, pts, merge: true });
+        }
         continue;
       }
       // straight out of the tip, but never past the center lines (tip 7 lies
@@ -440,6 +457,12 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       // so it uses a tighter clearance to make it across as one line
       pts = stopBeforeBoxes(pts, c.tip === 7 ? avoidTight : avoid, 0);
       pts = stopBeforeHit(pts, taken, 10);
+      // stagger the end points a little so the end circles don't line up
+      const pull = c.tip === 7 ? 0 : END_STAGGER[c.tip % END_STAGGER.length];
+      if (pull > 0) {
+        const len = polyLen(pts);
+        if (len > pull + 60) pts = cutAt(pts, (len - pull) / len);
+      }
       if (polyLen(pts) < 60) continue; // too short to draw (avoids stubs by the center line)
       for (let i = 1; i < pts.length; i++) taken.push([pts[i - 1], pts[i]]);
       runs.push({ tip: c.tip, pts });
@@ -476,7 +499,7 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   const glowId = `cwGlow-${useId().replace(/:/g, "")}`;
 
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+    <div aria-hidden="true" data-circuit-root={allCorners ? "" : undefined} className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
       <svg width="0" height="0" className="absolute">
         <defs>
           <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
