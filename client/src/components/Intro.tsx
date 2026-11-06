@@ -142,9 +142,9 @@ export default function Intro() {
               {Array.from({ length: 6 }).map((_, i) => (
                 <span key={i} className="flex shrink-0 items-center">
                   <span>Fuel your fire with Rebel Web Designs</span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-ember sm:mx-4" fill="currentColor"><path d="M4 11C4 6.6 7.6 3.4 12 3.4S20 6.6 20 11v5c0 1.4-1 2.4-2.4 2.7l-1.1.3c-.5.1-.8.5-.8 1v1.2a1 1 0 0 1-1 1H9.3a1 1 0 0 1-1-1V20c0-.5-.3-.9-.8-1l-1.1-.3C5 18.4 4 17.4 4 16Z" /><circle cx="8.6" cy="11" r="1.8" fill="#0a0a0b" /><circle cx="15.4" cy="11" r="1.8" fill="#0a0a0b" /><path d="M12 13.6l1.2 1.5a.6.6 0 0 1-.5 1h-1.4a.6.6 0 0 1-.5-1Z" fill="#0a0a0b" /></svg>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="currentColor"><path d="M4 11C4 6.6 7.6 3.4 12 3.4S20 6.6 20 11v5c0 1.4-1 2.4-2.4 2.7l-1.1.3c-.5.1-.8.5-.8 1v1.2a1 1 0 0 1-1 1H9.3a1 1 0 0 1-1-1V20c0-.5-.3-.9-.8-1l-1.1-.3C5 18.4 4 17.4 4 16Z" /><circle cx="8.6" cy="11" r="1.8" fill="#0a0a0b" /><circle cx="15.4" cy="11" r="1.8" fill="#0a0a0b" /><path d="M12 13.6l1.2 1.5a.6.6 0 0 1-.5 1h-1.4a.6.6 0 0 1-.5-1Z" fill="#0a0a0b" /></svg>
                   <span>RWD</span>
-                  <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-ember sm:mx-4" fill="currentColor"><path d="M4 11C4 6.6 7.6 3.4 12 3.4S20 6.6 20 11v5c0 1.4-1 2.4-2.4 2.7l-1.1.3c-.5.1-.8.5-.8 1v1.2a1 1 0 0 1-1 1H9.3a1 1 0 0 1-1-1V20c0-.5-.3-.9-.8-1l-1.1-.3C5 18.4 4 17.4 4 16Z" /><circle cx="8.6" cy="11" r="1.8" fill="#0a0a0b" /><circle cx="15.4" cy="11" r="1.8" fill="#0a0a0b" /><path d="M12 13.6l1.2 1.5a.6.6 0 0 1-.5 1h-1.4a.6.6 0 0 1-.5-1Z" fill="#0a0a0b" /></svg>
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="mx-3 h-4 w-4 shrink-0 text-white sm:mx-4" fill="currentColor"><path d="M4 11C4 6.6 7.6 3.4 12 3.4S20 6.6 20 11v5c0 1.4-1 2.4-2.4 2.7l-1.1.3c-.5.1-.8.5-.8 1v1.2a1 1 0 0 1-1 1H9.3a1 1 0 0 1-1-1V20c0-.5-.3-.9-.8-1l-1.1-.3C5 18.4 4 17.4 4 16Z" /><circle cx="8.6" cy="11" r="1.8" fill="#0a0a0b" /><circle cx="15.4" cy="11" r="1.8" fill="#0a0a0b" /><path d="M12 13.6l1.2 1.5a.6.6 0 0 1-.5 1h-1.4a.6.6 0 0 1-.5-1Z" fill="#0a0a0b" /></svg>
                 </span>
               ))}
             </span>
