@@ -421,11 +421,14 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       // one straight line each.
       const join = MERGE_AT[c.tip];
       if (join !== undefined && sharedCenter) {
-        // one straight line from the tip directly onto the center line (no
-        // bends); the bottom web's mirror copy meets it from below
-        if (cy - p[1] > 2) {
-          const pts: Pt[] = [p, [p[0], cy]];
-          taken.push([pts[0], pts[1]]);
+        // straight down a little, then one 45deg bend in toward the screen
+        // center that lands on the center line; with the bottom web's mirror
+        // copy each pair forms a small arrow pointing in
+        const dy = cy - p[1];
+        if (dy > 2) {
+          const drop = dy * 0.4; // straight part before the bend
+          const pts: Pt[] = [p, [p[0], p[1] + drop], [p[0] + (dy - drop), cy]];
+          for (let i = 1; i < pts.length; i++) taken.push([pts[i - 1], pts[i]]);
           runs.push({ tip: c.tip, pts, merge: true });
         }
         continue;
