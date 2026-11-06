@@ -227,7 +227,7 @@ export default function Intro() {
         REBEL WEB DESIGNS
       </h1>
 
-      <span data-circuit-avoid className={`intro-tagline mt-6 rounded-full border border-blood/60 bg-blood/10 px-5 py-2 font-display font-bold uppercase tracking-[0.3em] text-ember shadow-glow ${bigPlayer ? "text-base sm:text-lg" : "text-sm"}`}>
+      <span data-circuit-avoid data-circuit-pill className={`intro-tagline mt-6 rounded-full border border-blood/60 bg-blood/10 px-5 py-2 font-display font-bold uppercase tracking-[0.3em] text-ember shadow-glow ${bigPlayer ? "text-base sm:text-lg" : "text-sm"}`}>
         Coming Soon
       </span>
 

@@ -151,7 +151,8 @@ const TIP_CIRCUITS: { tip: number; reach: number }[] = [
   { tip: 2, reach: 1 },
   { tip: 3, reach: 1 },
   { tip: 4, reach: 1 },
-  { tip: 5, reach: 1 },
+  { tip: 5, reach: 1 }, // joins the center circuit (see MERGE_AT)
+  { tip: 6, reach: 1 }, // joins the center circuit (see MERGE_AT)
   { tip: 7, reach: 1 }, // center circuit
 ];
 const TIP_EXT = 40; // px each circuit continues straight out of its tip before turning
@@ -160,6 +161,10 @@ const TIP_EXT = 40; // px each circuit continues straight out of its tip before 
 const SPREAD = [0.72, 0.95, 0.8, 1, 0.86, 0.97];
 const STEPS = 2; // left/right stair steps per circuit (each step adds 2 bends)
 const AVOID_PAD = 16; // px kept clear around the logo, words, pill and player
+// Tips that join the center circuit, and how far in (as a share of the web's
+// size) they land on it. Tip 6 must land before tip 5 so they don't cross.
+const MERGE_AT: Record<number, number> = { 6: 0.25, 5: 0.42 };
+const PILL_GAP = 20; // px between the center circuit's end circle and the Coming Soon pill
 const TOP_AIM = 54; // px from the top the highest circuit aims for (smaller = higher; bottom mirrors it)
 const CENTER_GAP = 30; // px left between the left and right top/bottom-center circuits
 const EDGE_Y = 58; // px from the top (and bottom) edge for the top/bottom-center circuits
@@ -253,10 +258,11 @@ type Box = { l: number; t: number; r: number; b: number };
 // the Coming Soon pill, buttons, the music player), in screen px. Re-measures on
 // resize, when the player changes size, and after the intro animations settle.
 function useAvoidBoxes(on: boolean) {
-  const [state, setState] = useState<{ w: number; h: number; boxes: Box[] }>(() => ({
+  const [state, setState] = useState<{ w: number; h: number; boxes: Box[]; pill: Box | null }>(() => ({
     w: window.innerWidth,
     h: window.innerHeight,
     boxes: [],
+    pill: null,
   }));
   useEffect(() => {
     if (!on) return;
@@ -269,7 +275,11 @@ function useAvoidBoxes(on: boolean) {
           const r = el.getBoundingClientRect();
           if (r.width && r.height) boxes.push({ l: r.left, t: r.top, r: r.right, b: r.bottom });
         });
-        setState({ w: window.innerWidth, h: window.innerHeight, boxes });
+        // the Coming Soon pill: the center circuit ends just before it
+        const pe = document.querySelector<HTMLElement>("[data-circuit-pill]");
+        const pr = pe?.getBoundingClientRect();
+        const pill = pr && pr.width ? { l: pr.left, t: pr.top, r: pr.right, b: pr.bottom } : null;
+        setState({ w: window.innerWidth, h: window.innerHeight, boxes, pill });
       });
     };
     const timers: number[] = [];
@@ -345,7 +355,7 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   // sized to the screen instead, so neighbours meet exactly in the middle.
   const webSize = allCorners ? "" : "w-56 sm:w-80 lg:w-[26rem]";
   // Intro: circuits out of the web tips, in real screen px.
-  const { w, h, boxes } = useAvoidBoxes(!!allCorners);
+  const { w, h, boxes, pill } = useAvoidBoxes(!!allCorners);
   const webPx = Math.min(w / 2, h / 2); // the corner webs are this size (CornerWeb "fit")
   // On a wide screen the top and bottom webs share tip 7 on the center line, so
   // the bottom copies skip it (otherwise the center circuit is drawn twice).
@@ -357,7 +367,7 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
   // the other corners are mirror copies, so it stays even.
   const cx = w / 2;
   const cy = h / 2;
-  const runs: { tip: number; pts: Pt[] }[] = [];
+  const runs: { tip: number; pts: Pt[]; merge?: boolean }[] = [];
   if (allCorners) {
     const taken: [Pt, Pt][] = []; // segments already drawn (to avoid crossings)
     // Components to stay clear of, plus their mirror images: the circuits are
@@ -384,6 +394,19 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
       if (!UNIT_TIPS[c.tip]) continue;
       const [ux, uy] = UNIT_TIPS[c.tip]; // tip position for a size-1 web = spoke direction
       const p: Pt = [ux * webPx, uy * webPx];
+      // The two tips nearest the center line join INTO the center circuit:
+      // straight out, then a 45deg bend that lands on the center line. Tip 6
+      // joins first and tip 5 further in, so they never cross. The bottom webs
+      // mirror this, so each join forms a "Y".
+      const join = MERGE_AT[c.tip];
+      if (join !== undefined && sharedCenter) {
+        const jx = p[0] + webPx * join; // where it lands on the center line
+        const bend = Math.max(p[0], jx - (cy - p[1]));
+        const pts: Pt[] = [p, [bend, p[1]], [jx, cy]];
+        for (let i = 1; i < pts.length; i++) taken.push([pts[i - 1], pts[i]]);
+        runs.push({ tip: c.tip, pts, merge: true });
+        continue;
+      }
       // straight out of the tip, but never past the center lines (tip 7 lies
       // on the screen edge pointing along it, so it turns at the tip)
       let ext = c.tip === 7 ? 0 : TIP_EXT;
@@ -407,7 +430,10 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
         const ty = c.tip === 7 ? cy : TOP_AIM + (cy - TOP_AIM) * ((c.tip - 1) / 6);
         // every circuit reaches its full aim height (so the top one goes right
         // up under the ticker); `share` only sets how far across it runs
-        end = c.tip === 7 ? [cx, cy] : [turn[0] + (cx - turn[0]) * share, ty];
+        // the center circuit ends just before the Coming Soon pill (its mirror
+        // ends just after it on the right)
+        const pillStop = pill ? Math.min(cx, pill.l - PILL_GAP) : cx;
+        end = c.tip === 7 ? [pillStop, cy] : [turn[0] + (cx - turn[0]) * share, ty];
       }
       let pts = cutAt([p, turn, ...stairs(turn, end, STEPS)], c.reach);
       // the center circuit threads the gap between the pill and the paragraph,
@@ -435,7 +461,8 @@ export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
           traces: mine.map((r) => toPath(r.pts)),
           // the center circuit joins its mirror in the middle into one line, so
           // it has no end circle (only the circle at the web tip it starts from)
-          pads: mine.map((r) => (r.tip === 7 ? null : r.pts[r.pts.length - 1])),
+          // circuits that join the center line have no end circle either
+          pads: mine.map((r) => (r.merge ? null : r.pts[r.pts.length - 1])),
         };
       })
     : [{ traces: TRACES, pads: PADS }];
