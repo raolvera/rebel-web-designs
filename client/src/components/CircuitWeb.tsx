@@ -42,13 +42,19 @@ function webPaths(size: number, spokes: number, rings: number) {
   return { spokeDs, ringDs };
 }
 
-function CornerWeb({ className, flip, glowId }: { className: string; flip: string; glowId: string }) {
+function CornerWeb({ className, flip, glowId, fit }: { className: string; flip: string; glowId: string; fit?: boolean }) {
   const S = 400;
   const { spokeDs, ringDs } = webPaths(S, 8, 7);
   // Beams on every spoke, and on alternating rings so it isn't too busy.
   const beamRings = ringDs.filter((_, i) => i % 2 === 1);
   return (
-    <svg viewBox={`0 0 ${S} ${S}`} className={className} style={{ transform: flip }}>
+    <svg
+      viewBox={`0 0 ${S} ${S}`}
+      className={className}
+      // fit: never wider than 46% of the screen width or height, so webs in
+      // neighbouring corners can't touch (full original size when there's room).
+      style={{ transform: flip, ...(fit ? { maxWidth: "min(46vw, 46vh)" } : null) }}
+    >
       {/* silver silk (same chrome as the circuit traces) */}
       <g fill="none" stroke="#c9ccd1" strokeLinecap="round">
         {spokeDs.map((d, i) => (
@@ -105,7 +111,8 @@ const PADS: Pt[] = [
   [800, 680], [1300, 800], [300, 760], [260, 140], [1180, 220],
 ];
 
-export default function CircuitWeb({ allCorners, webSize = "w-56 sm:w-80 lg:w-[26rem]" }: { allCorners?: boolean; webSize?: string }) {
+export default function CircuitWeb({ allCorners }: { allCorners?: boolean }) {
+  const webSize = "w-56 sm:w-80 lg:w-[26rem]"; // original size
   // Unique per instance, since this can be on screen twice (site + intro).
   const glowId = `cwGlow-${useId().replace(/:/g, "")}`;
 
@@ -158,12 +165,12 @@ export default function CircuitWeb({ allCorners, webSize = "w-56 sm:w-80 lg:w-[2
       </svg>
 
       {/* Circuit spiderwebs in opposite corners (all four on the locked intro) */}
-      <CornerWeb glowId={glowId} className={`absolute left-0 top-0 ${webSize} opacity-60`} flip="none" />
-      <CornerWeb glowId={glowId} className={`absolute bottom-0 right-0 ${webSize} opacity-50`} flip="rotate(180deg)" />
+      <CornerWeb glowId={glowId} fit={allCorners} className={`absolute left-0 top-0 ${webSize} opacity-60`} flip="none" />
+      <CornerWeb glowId={glowId} fit={allCorners} className={`absolute bottom-0 right-0 ${webSize} opacity-50`} flip="rotate(180deg)" />
       {allCorners && (
         <>
-          <CornerWeb glowId={glowId} className={`absolute right-0 top-0 ${webSize} opacity-50`} flip="scaleX(-1)" />
-          <CornerWeb glowId={glowId} className={`absolute bottom-0 left-0 ${webSize} opacity-40`} flip="scaleY(-1)" />
+          <CornerWeb glowId={glowId} fit className={`absolute right-0 top-0 ${webSize} opacity-50`} flip="scaleX(-1)" />
+          <CornerWeb glowId={glowId} fit className={`absolute bottom-0 left-0 ${webSize} opacity-40`} flip="scaleY(-1)" />
         </>
       )}
 

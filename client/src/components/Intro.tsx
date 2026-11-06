@@ -73,12 +73,12 @@ function TickerBar({ pos, rev }: { pos: "top" | "bottom"; rev?: boolean }) {
 function StaticCircuits() {
   const traces = [
     "M0 320 H240 L280 360 H520 L560 320 V220",
-    "M1440 480 H1200 L1160 520 H980 L940 560 V640",
+    "M1440 600 H1200 L1160 560 H980 L940 520 V440",
     "M0 760 H200 L240 720 H460",
     "M1440 120 H1240 L1200 160 H1040 L1000 120 V60",
     "M620 0 V120 L660 160 H820",
   ];
-  const pads: [number, number][] = [[560, 220], [940, 640], [460, 720], [1000, 60], [820, 160]];
+  const pads: [number, number][] = [[560, 220], [940, 440], [460, 720], [1000, 60], [820, 160]];
   return (
     <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" className="absolute inset-0 h-full w-full" fill="none" aria-hidden="true">
       <g stroke="#c9ccd1" strokeWidth="1.1" strokeLinejoin="round" opacity="0.08">
@@ -209,7 +209,7 @@ export default function Intro() {
       <TickerBar pos="top" />
       <TickerBar pos="bottom" rev />
       {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
-      <CircuitWeb allCorners webSize="w-40 sm:w-64 lg:w-80" />
+      <CircuitWeb allCorners />
       <div className="pointer-events-none absolute inset-0 grid-floor" />
       <div className="pointer-events-none absolute left-1/2 top-1/2 h-72 w-72 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blood/15 blur-[120px]" />
 
