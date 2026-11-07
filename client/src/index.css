@@ -560,3 +560,19 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .rwd-flame { animation: none; }
 }
+
+/* --- Ticker skull: chrome glow + slowly pulsing red eyes --- */
+.rwd-skull {
+  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.55)) drop-shadow(0 0 1px rgba(201, 204, 209, 0.9));
+}
+.rwd-skull-eye {
+  filter: drop-shadow(0 0 1.5px rgba(255, 59, 63, 0.95));
+  animation: rwdSkullEye 2.4s ease-in-out infinite alternate;
+}
+@keyframes rwdSkullEye {
+  from { fill: #8b0d18; }
+  to { fill: #ff3b3f; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rwd-skull-eye { animation: none; fill: #e11d2a; }
+}
