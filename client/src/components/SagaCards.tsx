@@ -220,8 +220,15 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
           })}
         </div>
 
+        {/* lots of photos: a simple counter (dots would spill past the card) */}
+        {n > 8 && (
+          <div className="pb-2.5 text-center text-[10px] font-semibold tracking-[0.2em] text-ash" aria-hidden="true">
+            <span style={{ color: st.edge }}>{(idx % n) + 1}</span> / {n}
+          </div>
+        )}
+
         {/* dots */}
-        {n > 1 && (
+        {n > 1 && n <= 8 && (
           <div className="flex justify-center gap-1.5 pb-2.5">
             {slides.map((s, i) => (
               <button
