@@ -102,7 +102,6 @@ function useXPosts() {
 }
 
 // Left card: Anakin, then the fall, round after round (Vader is on the right).
-const SAGA: Stage[] = ["anakin", "fall"];
 function sagaSlides(d: Data | null): Slide[] {
   const anakin = d?.posts.anakin ?? [];
   const fall = d?.posts.fall ?? [];
@@ -131,13 +130,18 @@ const SIDE_INSET = "clamp(24px, calc(24px + (100vw - 1280px) / 4), 72px)";
 
 function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[]; side: "left" | "right" | "stack"; saga?: boolean }) {
   const [idx, setIdx] = useState(0);
+  const [moves, setMoves] = useState(0); // counts changes (restarts the saga beam)
   const [paused, setPaused] = useState(false);
   const timer = useRef<number | null>(null);
   const n = slides.length;
+  const go = (i: number) => {
+    setIdx(i);
+    setMoves((m) => m + 1);
+  };
 
   useEffect(() => {
     if (paused || n < 2) return;
-    timer.current = window.setTimeout(() => setIdx((i) => (i + 1) % n), SLIDE_MS);
+    timer.current = window.setTimeout(() => go((idx + 1) % n), SLIDE_MS);
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
     };
@@ -177,7 +181,7 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
             {title}
           </span>
           <button
-            onClick={() => setIdx((i) => (i + 1) % n)}
+            onClick={() => go((idx + 1) % n)}
             disabled={n < 2}
             aria-label="Skip to the next edit"
             className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wider text-ash transition hover:bg-white/5 hover:text-silver disabled:opacity-40"
@@ -189,22 +193,18 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
           </button>
         </div>
 
-        {/* saga progress: Anakin -> The Fall */}
+        {/* saga progress: Anakin (blue) -> The Fall (purple). On every change a
+            beam runs between the circles, shifting color as it goes: blue ->
+            purple into the fall, purple -> blue back to Anakin. */}
         {saga && (
           <div className="flex items-center gap-1.5 px-3 pt-2.5" aria-hidden="true">
-            {SAGA.map((s, i) => (
-              <div key={s} className="flex flex-1 items-center gap-1.5">
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full"
-                  style={{
-                    background: cur.stage === s ? STAGES[s].edge : "#2a2a2f",
-                    boxShadow: cur.stage === s ? `0 0 8px ${STAGES[s].edge}` : "none",
-                    transition: `all ${MOVE_MS}ms ease`,
-                  }}
-                />
-                {i < SAGA.length - 1 && <span className="h-px flex-1 bg-white/10" />}
-              </div>
-            ))}
+            <SagaDot on={cur.stage === "anakin"} color={STAGES.anakin.edge} />
+            <span className="relative h-px flex-1 bg-white/10">
+              {moves > 0 && (
+                <span key={moves} className={cur.stage === "fall" ? "rwd-saga-beam rwd-saga-beam-in" : "rwd-saga-beam rwd-saga-beam-out"} />
+              )}
+            </span>
+            <SagaDot on={cur.stage === "fall"} color={STAGES.fall.edge} />
           </div>
         )}
 
@@ -231,34 +231,49 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
           })}
         </div>
 
-        {/* lots of photos: a simple counter (dots would spill past the card) */}
-        {n > 8 && (
-          <div className="pb-2.5 text-center text-[10px] font-semibold tracking-[0.2em] text-ash" aria-hidden="true">
-            <span style={{ color: st.edge }}>{(idx % n) + 1}</span> / {n}
-          </div>
-        )}
-
-        {/* dots */}
-        {n > 1 && n <= 8 && (
-          <div className="flex justify-center gap-1.5 pb-2.5">
-            {slides.map((s, i) => (
-              <button
-                key={i}
-                onClick={() => setIdx(i)}
-                aria-label={`Show edit ${i + 1} of ${n}`}
-                aria-current={i === idx % n}
-                className="h-1.5 rounded-full transition-all"
-                style={{
-                  width: i === idx % n ? 14 : 6,
-                  background: i === idx % n ? STAGES[s.stage].edge : "#2a2a2f",
-                  transitionDuration: `${MOVE_MS}ms`,
-                }}
-              />
-            ))}
+        {/* dots, colored by stage (Anakin blue, the fall purple, Vader red);
+            smaller when there are lots of photos so they fit on the card */}
+        {n > 1 && (
+          <div className="flex flex-wrap justify-center pb-2.5" style={{ gap: n > 10 ? 3 : 6 }}>
+            {slides.map((s, i) => {
+              const on = i === idx % n;
+              const c = STAGES[s.stage].edge;
+              return (
+                <button
+                  key={i}
+                  onClick={() => go(i)}
+                  aria-label={`Show edit ${i + 1} of ${n}`}
+                  aria-current={on}
+                  className="rounded-full transition-all"
+                  style={{
+                    height: n > 10 ? 5 : 6,
+                    width: on ? (n > 10 ? 11 : 14) : n > 10 ? 5 : 6,
+                    background: on ? c : `${c}40`,
+                    boxShadow: on ? `0 0 6px ${c}` : "none",
+                    transitionDuration: `${MOVE_MS}ms`,
+                  }}
+                />
+              );
+            })}
           </div>
         )}
       </div>
     </section>
+  );
+}
+
+// A saga circle: lights up in its color (and glows) when its stage is showing.
+function SagaDot({ on, color }: { on: boolean; color: string }) {
+  return (
+    <span
+      className="h-2.5 w-2.5 shrink-0 rounded-full"
+      style={{
+        background: on ? color : "#2a2a2f",
+        boxShadow: on ? `0 0 10px ${color}, 0 0 3px ${color}` : "none",
+        // lights up as the beam arrives
+        transition: `background ${MOVE_MS}ms ease ${on ? MOVE_MS * 0.6 : 0}ms, box-shadow ${MOVE_MS}ms ease ${on ? MOVE_MS * 0.6 : 0}ms`,
+      }}
+    />
   );
 }
 

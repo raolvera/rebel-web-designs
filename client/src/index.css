@@ -589,3 +589,37 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .rwd-saga-slide { transition: none !important; }
 }
+
+/* --- Left card: beam between the Anakin (blue) and fall (purple) circles,
+   shifting color as it travels --- */
+.rwd-saga-beam {
+  position: absolute;
+  top: 50%;
+  height: 3px;
+  width: 26px;
+  margin-top: -1.5px;
+  border-radius: 9999px;
+  opacity: 0;
+  animation-duration: 1.4s;
+  animation-timing-function: cubic-bezier(0.45, 0, 0.2, 1);
+  animation-fill-mode: forwards;
+}
+/* into the fall: blue -> purple, left to right */
+.rwd-saga-beam-in { animation-name: rwdSagaBeamIn; }
+@keyframes rwdSagaBeamIn {
+  0%   { left: 0; opacity: 0; background: #3b82f6; box-shadow: 0 0 8px #3b82f6; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { left: calc(100% - 26px); opacity: 0; background: #9333ea; box-shadow: 0 0 10px #a855f7; }
+}
+/* back to Anakin: purple -> blue, right to left */
+.rwd-saga-beam-out { animation-name: rwdSagaBeamOut; }
+@keyframes rwdSagaBeamOut {
+  0%   { left: calc(100% - 26px); opacity: 0; background: #9333ea; box-shadow: 0 0 8px #a855f7; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { left: 0; opacity: 0; background: #3b82f6; box-shadow: 0 0 10px #3b82f6; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rwd-saga-beam { display: none; }
+}
