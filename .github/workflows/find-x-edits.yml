@@ -9,16 +9,20 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "likes = photos liked by the account below, all = search all-time art, recent = search last 7 days"
+        description: "posts = your shares + more art from those artists, all = search all-time art, recent = search last 7 days"
         type: choice
-        options: [likes, all, recent]
-        default: likes
+        options: [posts, all, recent]
+        default: posts
       username:
-        description: "X account whose likes to use (likes mode)"
+        description: "X account whose posts/reposts to use (posts mode)"
         type: string
         default: rebel_520
       pages:
-        description: "Pages of 100 posts to read (about $0.50 per page)"
+        description: "Pages of 100 of your posts to read (about $0.50 per page)"
+        type: number
+        default: 5
+      artist_pages:
+        description: "Pages of 100 posts from those artists (about $0.50 per page)"
         type: number
         default: 5
 
@@ -41,6 +45,7 @@ jobs:
           X_MODE: ${{ inputs.mode }}
           X_USERNAME: ${{ inputs.username }}
           X_PAGES: ${{ inputs.pages }}
+          X_ARTIST_PAGES: ${{ inputs.artist_pages }}
         run: node scripts/x-find.mjs
 
       - name: Save the full results
