@@ -1,0 +1,46 @@
+# Searches X for Star Wars fan edits (Anakin / the fall / Darth Vader), with
+# politics filtered out, ranked by views. It does NOT change the site: the
+# results show on the run's summary page so you can pick which to display.
+# Uses the X_BEARER_TOKEN repository secret. Each post read is a paid X read.
+name: Find Star Wars edits on X
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "recent = last 7 days (cheaper), all = all-time"
+        type: choice
+        options: [recent, all]
+        default: recent
+      pages:
+        description: "Pages of 100 posts to read (about $0.50 per page)"
+        type: number
+        default: 2
+
+permissions:
+  contents: read
+
+jobs:
+  find:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Search X
+        env:
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          X_MODE: ${{ inputs.mode }}
+          X_PAGES: ${{ inputs.pages }}
+        run: node scripts/x-find.mjs
+
+      - name: Save the full results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: x-candidates
+          path: x-candidates.json
+          if-no-files-found: ignore

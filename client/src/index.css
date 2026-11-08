@@ -576,3 +576,13 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .rwd-skull-eye { animation: none; fill: #e11d2a; }
 }
+
+/* --- Star Wars edit cards on the intro: only where there's room beside the
+   title (wide, tall-enough screens); they float over the webs + circuits --- */
+.rwd-saga { display: none; }
+@media (min-width: 1280px) and (min-height: 700px) {
+  .rwd-saga { display: block; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rwd-saga-slide { transition: none !important; }
+}

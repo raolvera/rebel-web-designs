@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import RwdMark from "./RwdMark";
 import CircuitWeb from "./CircuitWeb";
+import SagaCards from "./SagaCards";
 
 /**
  * Intro splash. Click ANYWHERE on it → the song starts automatically (that one
@@ -222,6 +223,8 @@ export default function Intro() {
           intro so nothing from the full site leaks. */}
       <TickerBar pos="top" />
       <TickerBar pos="bottom" rev />
+      {/* Star Wars edit cards (left: the saga, right: Vader), over the webs */}
+      <SagaCards />
       {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
       <CircuitWeb allCorners />
       <div className="pointer-events-none absolute inset-0 grid-floor" />

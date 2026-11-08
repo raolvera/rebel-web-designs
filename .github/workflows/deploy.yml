@@ -7,6 +7,9 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  # Rebuild once a day so the Star Wars cards' view counts stay fresh.
+  schedule:
+    - cron: "17 9 * * *"
 
 permissions:
   contents: read
@@ -32,6 +35,14 @@ jobs:
       - name: Install
         working-directory: client
         run: npm ci
+
+      - name: Star Wars cards - latest view counts from X
+        # Looks up the posts in scripts/x-picks.json (secret token, never sent
+        # to visitors). Skips quietly if there's no token or no picks.
+        env:
+          X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+        run: node scripts/x-lookup.mjs
+        continue-on-error: true
 
       - name: Build (uses client/.env.production, so it's the Coming Soon lock)
         working-directory: client

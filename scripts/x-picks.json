@@ -1,0 +1,6 @@
+{
+  "_how": "Post IDs to show on the intro cards, in order. Get IDs from Actions -> 'Find Star Wars edits on X'. anakin + fall = left card, vader = right card.",
+  "anakin": [],
+  "fall": [],
+  "vader": []
+}

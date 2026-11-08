@@ -22,3 +22,10 @@ server/src/rag/index.json
 Thumbs.db
 .idea/
 .vscode/
+
+# Generated at deploy time from the X API (Star Wars intro cards)
+client/public/x-posts.json
+x-candidates.json
+
+# Games taken out of the arcade, kept locally to move elsewhere
+rebel-games/
