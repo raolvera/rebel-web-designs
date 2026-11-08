@@ -126,7 +126,9 @@ function vaderSlides(d: Data | null): Slide[] {
 const SLIDE_MS = 9000; // time on each card
 const MOVE_MS = 1400; // slow slide between cards
 // Distance of the side cards from the screen edge (desktop/laptop only).
-const SIDE_INSET = "clamp(25px, calc(25px + (100vw - 1280px) * 0.27), 95px)";
+// Close to the screen edges, so the cards cover where the center circuit
+// starts at each edge.
+const SIDE_INSET = "10px";
 
 function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[]; side: "left" | "right" | "stack"; saga?: boolean }) {
   const [idx, setIdx] = useState(0);
