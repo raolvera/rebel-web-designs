@@ -9,9 +9,9 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "posts = your shares + more art from those artists, all = search all-time art, recent = search last 7 days"
+        description: "posts = your shares + those artists + similar artists, likes = same but from YOUR likes (needs 4 account-key secrets), all = search all-time art, recent = last 7 days"
         type: choice
-        options: [posts, all, recent]
+        options: [posts, likes, all, recent]
         default: posts
       username:
         description: "X account whose posts/reposts to use (posts mode)"
@@ -22,7 +22,11 @@ on:
         type: number
         default: 5
       artist_pages:
-        description: "Pages of 100 posts from those artists (about $0.50 per page)"
+        description: "Pages of 100 posts from those artists + their reposts (about $0.50 per page)"
+        type: number
+        default: 5
+      similar_pages:
+        description: "Pages of 100 posts from NEW artists using the same hashtags (about $0.50 per page)"
         type: number
         default: 5
 
@@ -42,10 +46,16 @@ jobs:
       - name: Search X
         env:
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
+          # your own account's keys: only needed for "likes" mode
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
           X_MODE: ${{ inputs.mode }}
           X_USERNAME: ${{ inputs.username }}
           X_PAGES: ${{ inputs.pages }}
           X_ARTIST_PAGES: ${{ inputs.artist_pages }}
+          X_SIMILAR_PAGES: ${{ inputs.similar_pages }}
         run: node scripts/x-find.mjs
 
       - name: Save the full results

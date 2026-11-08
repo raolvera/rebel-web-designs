@@ -1,6 +1,14 @@
 {
-  "_how": "Post IDs to show on the intro cards, in order. Get IDs from Actions -> 'Find Star Wars edits on X'. anakin + fall = left card, vader = right card.",
-  "anakin": [],
-  "fall": [],
+  "_how": "Post IDs to show on the intro cards, in order. Get IDs from Actions -> 'Find Star Wars edits on X'. anakin + fall = left card, vader = right card. New picks get added after these.",
+  "anakin": [
+    "2119058955813155264",
+    "2117345361757155682"
+  ],
+  "fall": [
+    "2118925050028118179",
+    "2117329985212215439",
+    "2118825113869304133",
+    "2118149385536360781"
+  ],
   "vader": []
 }

@@ -5,8 +5,11 @@
 // Modes (X_MODE):
 //   posts  = (default) 1) the photos an account has posted or reposted
 //            (X_USERNAME, default rebel_520), then 2) more Star Wars art from
-//            the same artists. (Likes can't be used: X only shows an account's
-//            likes to that account's own login, not to an app token.)
+//            the same artists, then 3) similar artists.
+//   likes  = same, but step 1 reads YOUR likes. X only shows likes to the
+//            account's own keys, so this needs 4 more secrets: X_API_KEY,
+//            X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET. Likes are filtered
+//            to true art (no AI, memes, toys, ads).
 //   all    = search all of X for Star Wars artwork
 //   recent = same search, last 7 days only
 //
@@ -15,8 +18,8 @@
 // written). Up to X_PAGES x 100 posts in step 1, and X_ARTIST_PAGES x 100 in
 // step 2.
 
-import { appendFileSync, writeFileSync } from "node:fs";
-import { FIELDS, isCorny, isCrude, isPolitical, isPromo, stageOf, toPosts, token, xGet } from "./x-common.mjs";
+import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { FIELDS, isCorny, isCrude, isPolitical, isPromo, stageOf, toPosts, token, userKeys, xGet } from "./x-common.mjs";
 
 const bearer = token();
 if (!bearer) {
@@ -25,9 +28,10 @@ if (!bearer) {
   process.exit(1);
 }
 
-const MODE = ["posts", "all", "recent"].includes(process.env.X_MODE) ? process.env.X_MODE : "posts";
+const MODE = ["posts", "likes", "all", "recent"].includes(process.env.X_MODE) ? process.env.X_MODE : "posts";
 const PAGES = Math.min(10, Math.max(1, Number(process.env.X_PAGES) || 5));
 const ARTIST_PAGES = Math.min(10, Math.max(0, Number(process.env.X_ARTIST_PAGES ?? 5)));
+const SIMILAR_PAGES = Math.min(10, Math.max(0, Number(process.env.X_SIMILAR_PAGES ?? 5)));
 const USERNAME = (process.env.X_USERNAME || "rebel_520").replace(/^@/, "").trim();
 
 function fail(msg) {
@@ -45,7 +49,7 @@ let reads = 0;
 
 // Read up to `pages` pages of an X endpoint into `seen` (id -> post).
 // `resolve` swaps reposts for the original post (photo, caption, artist).
-async function readPages(path, baseParams, pages, pageParam, seen, tag, { resolve = false, failFirst = true } = {}) {
+async function readPages(path, baseParams, pages, pageParam, seen, tag, { resolve = false, failFirst = true, auth = bearer } = {}) {
   let next;
   let got = 0;
   for (let page = 0; page < pages; page++) {
@@ -54,7 +58,7 @@ async function readPages(path, baseParams, pages, pageParam, seen, tag, { resolv
     if (next) params.set(pageParam, next);
     let body;
     try {
-      body = await xGet(path, params, bearer);
+      body = await xGet(path, params, auth);
     } catch (e) {
       const msg = String(e.message || e);
       if (page === 0 && failFirst) fail(msg);
@@ -90,21 +94,40 @@ async function readPages(path, baseParams, pages, pageParam, seen, tag, { resolv
 const seen = new Map();
 let label;
 let artists = [];
+let tags = [];
 
-if (MODE === "posts") {
-  // ---------- step 1: what @USERNAME posted / reposted ----------
-  let user;
-  try {
-    user = await xGet(`/users/by/username/${encodeURIComponent(USERNAME)}`, new URLSearchParams(), bearer);
-  } catch (e) {
-    fail(`Couldn't find @${USERNAME}: ${e.message || e}`);
+if (MODE === "posts" || MODE === "likes") {
+  if (MODE === "likes") {
+    // ---------- step 1: YOUR likes (needs your own account's keys) ----------
+    const keys = userKeys();
+    if (!keys)
+      fail(
+        "Likes need your own account's keys. Add these 4 repository secrets: X_API_KEY, X_API_SECRET (the API Key + Secret), X_ACCESS_TOKEN, X_ACCESS_SECRET (Keys and tokens -> Access Token and Secret -> Generate).",
+      );
+    let me;
+    try {
+      me = await xGet("/users/me", new URLSearchParams({ "user.fields": "username" }), keys);
+    } catch (e) {
+      fail(`Your account keys didn't work: ${e.message || e}`);
+    }
+    if (!me?.data?.id) fail("Your account keys didn't return an account.");
+    await readPages(`/users/${me.data.id}/liked_tweets`, new URLSearchParams(FIELDS), PAGES, "pagination_token", seen, "yours", { auth: keys });
+    label = `photos @${me.data.username} liked (true art only), the same artists, and similar artists`;
+  } else {
+    // ---------- step 1: what @USERNAME posted / reposted ----------
+    let user;
+    try {
+      user = await xGet(`/users/by/username/${encodeURIComponent(USERNAME)}`, new URLSearchParams(), bearer);
+    } catch (e) {
+      fail(`Couldn't find @${USERNAME}: ${e.message || e}`);
+    }
+    if (!user?.data?.id) fail(`Couldn't find @${USERNAME} on X.`);
+    const p1 = new URLSearchParams(FIELDS);
+    p1.set("tweet.fields", `${p1.get("tweet.fields")},referenced_tweets`);
+    p1.set("expansions", `${p1.get("expansions")},referenced_tweets.id,referenced_tweets.id.attachments.media_keys,referenced_tweets.id.author_id`);
+    await readPages(`/users/${user.data.id}/tweets`, p1, PAGES, "pagination_token", seen, "yours", { resolve: true });
+    label = `@${USERNAME}'s Star Wars shares, the same artists, and similar artists`;
   }
-  if (!user?.data?.id) fail(`Couldn't find @${USERNAME} on X.`);
-  const p1 = new URLSearchParams(FIELDS);
-  p1.set("tweet.fields", `${p1.get("tweet.fields")},referenced_tweets`);
-  p1.set("expansions", `${p1.get("expansions")},referenced_tweets.id,referenced_tweets.id.attachments.media_keys,referenced_tweets.id.author_id`);
-  await readPages(`/users/${user.data.id}/tweets`, p1, PAGES, "pagination_token", seen, "yours", { resolve: true });
-  label = `@${USERNAME}'s Star Wars shares + more art from the same artists`;
 
   // ---------- step 2: more Star Wars art from those artists ----------
   const mine = [...seen.values()].filter((p) => p.image && !p.isVideo);
@@ -114,8 +137,10 @@ if (MODE === "posts") {
   artists = [...new Set(pool.filter((u) => u && u.toLowerCase() !== USERNAME.toLowerCase()))];
 
   if (artists.length && ARTIST_PAGES > 0) {
-    // one query per batch of artists that fits X's 512-character limit
-    const tail = ` ${SW_TERMS} has:images -has:videos -is:retweet -is:reply`;
+    // one query per batch of artists that fits X's 512-character limit.
+    // Their reposts are included: artists repost other artists in the same
+    // style, which finds NEW artists (marked "similar artist").
+    const tail = ` ${SW_TERMS} has:images -has:videos -is:reply`;
     const batches = [];
     let cur = [];
     for (const a of artists) {
@@ -131,14 +156,53 @@ if (MODE === "posts") {
     for (const b of batches) {
       if (budget <= 0) break;
       const q = new URLSearchParams(FIELDS);
+      q.set("tweet.fields", `${q.get("tweet.fields")},referenced_tweets`);
+      q.set("expansions", `${q.get("expansions")},referenced_tweets.id,referenced_tweets.id.attachments.media_keys,referenced_tweets.id.author_id`);
       q.set("query", `(${b.map((x) => `from:${x}`).join(" OR ")})${tail}`);
       q.set("sort_order", "relevancy");
       const pages = Math.min(perBatch, budget);
       budget -= pages;
       // all-time first; if that's not allowed on this account, last 7 days
-      let r = await readPages("/tweets/search/all", q, pages, "next_token", seen, "artist", { failFirst: false });
-      if (r.error && !r.got) r = await readPages("/tweets/search/recent", q, pages, "next_token", seen, "artist", { failFirst: false });
+      let r = await readPages("/tweets/search/all", q, pages, "next_token", seen, "artist", { failFirst: false, resolve: true });
+      if (r.error && !r.got) r = await readPages("/tweets/search/recent", q, pages, "next_token", seen, "artist", { failFirst: false, resolve: true });
     }
+    // a repost by one of your artists, of someone else's work = a similar artist
+    const known = new Set(artists.map((a) => a.toLowerCase()));
+    for (const p of seen.values()) if (p.source === "artist" && !known.has(p.username.toLowerCase())) p.source = "similar";
+  }
+
+  // ---------- step 3: other artists using the same hashtags ----------
+  if (SIMILAR_PAGES > 0) {
+    const counts = new Map();
+    for (const p of seen.values()) {
+      if (!p.image || p.isVideo || !STAR_WARS.test(p.text) || isPolitical(p.text) || isCorny(p.text)) continue;
+      for (const m of p.text.matchAll(/#(\w{3,40})/g)) {
+        const t = m[1].toLowerCase();
+        counts.set(t, (counts.get(t) ?? 0) + 1);
+      }
+    }
+    // the most-used tags; skip any that are political or corny themselves
+    tags = [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([t]) => t)
+      .filter((t) => !isPolitical(`#${t} ${t}`) && !isCorny(t) && !isPromo(t))
+      .slice(0, 10);
+    if (!tags.length) tags = ["starwarsart", "digitalart", "conceptart", "illustration"];
+    let query = `(${tags.map((t) => `#${t}`).join(" OR ")}) ${SW_TERMS} has:images -has:videos -is:retweet -is:reply -is:quote`;
+    // leave out artists already found, so these are NEW people
+    for (const u of [USERNAME, ...artists]) {
+      if ((query + ` -from:${u}`).length > 512) break;
+      query += ` -from:${u}`;
+    }
+    for (const w of ["lol", "meme", "toy", "figure", "cosplay", "ai", "aiart", "midjourney"]) {
+      if ((query + ` -${w}`).length > 512) break;
+      query += ` -${w}`;
+    }
+    const q = new URLSearchParams(FIELDS);
+    q.set("query", query);
+    q.set("sort_order", "relevancy");
+    let r = await readPages("/tweets/search/all", q, SIMILAR_PAGES, "next_token", seen, "similar", { failFirst: false });
+    if (r.error && !r.got) await readPages("/tweets/search/recent", q, SIMILAR_PAGES, "next_token", seen, "similar", { failFirst: false });
   }
 } else {
   // ---------- search all of X for Star Wars artwork ----------
@@ -161,17 +225,27 @@ if (MODE === "posts") {
 }
 
 // ---------- sort into the cards ----------
+// photos already on the cards don't need picking again
+const onCards = new Set();
+try {
+  const picks = JSON.parse(readFileSync(new URL("./x-picks.json", import.meta.url), "utf8"));
+  for (const k of ["anakin", "fall", "vader"]) for (const id of picks[k] ?? []) onCards.add(id);
+} catch {
+  /* no picks yet */
+}
 const groups = { anakin: [], fall: [], vader: [] };
-const other = []; // your shared photos whose caption doesn't say what they are
+const other = []; // your photos whose caption doesn't say what they are
 let dropped = 0;
 for (const p of seen.values()) {
+  if (onCards.has(p.id)) continue;
   // photos only, never video, never politics
   if (!p.image || p.isVideo || isPolitical(p.text) || isCrude(p.username)) {
     dropped++;
     continue;
   }
-  // everything you didn't share yourself also drops corny posts and ads
-  if (p.source !== "yours" && (isPromo(p.text) || isCorny(p.text))) {
+  // true art only: everything except your own posts drops corny posts and ads
+  // (that includes your likes)
+  if ((p.source !== "yours" || MODE === "likes") && (isPromo(p.text) || isCorny(p.text))) {
     dropped++;
     continue;
   }
@@ -187,18 +261,21 @@ for (const k of Object.keys(groups)) {
   ].slice(0, 50);
 }
 
-writeFileSync("x-candidates.json", JSON.stringify({ mode: MODE, label, reads, artists, groups, other: other.slice(0, 60) }, null, 2));
+writeFileSync("x-candidates.json", JSON.stringify({ mode: MODE, label, reads, artists, tags, groups, other: other.slice(0, 60) }, null, 2));
 
 // ---------- a readable page with a thumbnail of every photo ----------
 const esc = (s) => s.replace(/\|/g, "\\|").replace(/\s+/g, " ").slice(0, 90);
 const fmt = (n) => n.toLocaleString("en-US");
 let md = `## Star Wars photos on X (${label})\n\n`;
 md += `Read **${reads}** posts (about **$${(reads * 0.005).toFixed(2)}** at $0.005/read). `;
-md += `Skipped ${dropped}: videos, no photo, politics, crude account names, or (not from you) memes/toys/cosplay/AI/ads.\n\n`;
-if (MODE === "posts") {
+md += MODE === "likes"
+  ? `Skipped ${dropped}: videos, no photo, politics, crude account names, memes/toys/cosplay/AI/ads. Photos already on the cards aren't listed.\n\n`
+  : `Skipped ${dropped}: videos, no photo, politics, crude account names, or (not from you) memes/toys/cosplay/AI/ads. Photos already on the cards aren't listed.\n\n`;
+if (MODE === "posts" || MODE === "likes") {
   md += artists.length
     ? `Artists found in your shares: ${artists.slice(0, 30).map((a) => `@${a}`).join(", ")}${artists.length > 30 ? ` and ${artists.length - 30} more` : ""}.\n\n`
     : "_No artists found in your shares, so there was nothing more to search._\n\n";
+  if (tags.length) md += `Similar artists were found with these hashtags: ${tags.map((t) => `#${t}`).join(" ")}.\n\n`;
 }
 
 function table(title, prefix, list) {
@@ -207,7 +284,7 @@ function table(title, prefix, list) {
   out += "| # | Photo | From | Views | Account | Post | ID |\n|---|---|---|---:|---|---|---|\n";
   list.forEach((p, i) => {
     const thumb = `<a href="${p.url}"><img src="${p.image}" width="140" alt=""></a>`;
-    const from = p.source === "yours" ? "you" : p.source === "artist" ? "same artist" : "search";
+    const from = { yours: MODE === "likes" ? "you liked" : "you", artist: "same artist", similar: "similar artist" }[p.source] ?? "search";
     out += `| **${prefix}${i + 1}** | ${thumb} | ${from} | ${fmt(p.views)} | @${p.username} | [${esc(p.text) || "(no text)"}](${p.url}) | ${p.id} |\n`;
   });
   return out + "\n";
@@ -215,8 +292,9 @@ function table(title, prefix, list) {
 md += table("Anakin (left card)", "A", groups.anakin);
 md += table("The fall (left card)", "F", groups.fall);
 md += table("Darth Vader (right card)", "V", groups.vader);
-if (MODE === "posts") {
-  md += table("Other photos you shared (no Star Wars words in the caption - pick any that are Star Wars)", "O", other.slice(0, 60));
+if (MODE === "posts" || MODE === "likes") {
+  const what = MODE === "likes" ? "you liked" : "you shared";
+  md += table(`Other photos ${what} (no Star Wars words in the caption - pick any that are Star Wars)`, "O", other.slice(0, 60));
 }
 md += "Tell Kiro the numbers of the photos you like (for example `A1, A4, F2, V3, O7`), and for O picks which card each goes on.\n";
 

@@ -21,9 +21,50 @@ export function token() {
   return t;
 }
 
-export async function xGet(path, params, bearer) {
+// Your own account's keys (OAuth 1.0a "user context"). Only these can read an
+// account's likes. All four come from GitHub secrets; returns null if any is
+// missing.
+export function userKeys() {
+  const k = {
+    consumerKey: process.env.X_API_KEY,
+    consumerSecret: process.env.X_API_SECRET,
+    token: process.env.X_ACCESS_TOKEN,
+    tokenSecret: process.env.X_ACCESS_SECRET,
+  };
+  return Object.values(k).every(Boolean) ? k : null;
+}
+
+// RFC 3986 percent-encoding, as OAuth 1.0a requires.
+const enc = (s) => encodeURIComponent(s).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
+
+// `fixed` (nonce + timestamp) is only for testing against X's documented example.
+export async function oauth1Header(method, baseUrl, params, k, fixed) {
+  const { createHmac, randomBytes } = await import("node:crypto");
+  const oauth = {
+    oauth_consumer_key: k.consumerKey,
+    oauth_nonce: fixed?.nonce ?? randomBytes(16).toString("hex"),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp: fixed?.timestamp ?? String(Math.floor(Date.now() / 1000)),
+    oauth_token: k.token,
+    oauth_version: "1.0",
+  };
+  const all = [...params.entries(), ...Object.entries(oauth)]
+    .map(([a, b]) => [enc(a), enc(b)])
+    .sort((x, y) => (x[0] === y[0] ? (x[1] < y[1] ? -1 : 1) : x[0] < y[0] ? -1 : 1))
+    .map(([a, b]) => `${a}=${b}`)
+    .join("&");
+  const base = `${method}&${enc(baseUrl)}&${enc(all)}`;
+  const sig = createHmac("sha1", `${enc(k.consumerSecret)}&${enc(k.tokenSecret)}`).update(base).digest("base64");
+  const header = { ...oauth, oauth_signature: sig };
+  return "OAuth " + Object.entries(header).map(([a, b]) => `${enc(a)}="${enc(b)}"`).join(", ");
+}
+
+// `auth` is either the app's Bearer Token (a string) or your own keys from
+// userKeys() (needed for likes).
+export async function xGet(path, params, auth) {
   const url = `${API}${path}?${params.toString()}`;
-  const res = await fetch(url, { headers: { Authorization: `Bearer ${bearer}` } });
+  const Authorization = typeof auth === "string" ? `Bearer ${auth}` : await oauth1Header("GET", `${API}${path}`, params, auth);
+  const res = await fetch(url, { headers: { Authorization } });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     const msg = body?.detail || body?.title || JSON.stringify(body).slice(0, 300);
