@@ -93,6 +93,17 @@ export default function MusicPlayer() {
 
   const [playing, setPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
+  // Phones: the player is locked in place at the bottom (no dragging). The
+  // Audio / Video switch still works.
+  const PHONE_MQ = "(max-width: 639px)";
+  const [isPhone, setIsPhone] = useState(() => window.matchMedia(PHONE_MQ).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(PHONE_MQ);
+    const on = () => setIsPhone(mq.matches);
+    on();
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
   const [videoSize, setVideoSize] = useState<"sm" | "md" | "lg">("sm"); // user-resizable
   // Read the intro flag synchronously so there's no race with the intro's event.
   const [introMode, setIntroMode] = useState<boolean>(() => !!(window as any).__rebelIntro);
@@ -547,7 +558,7 @@ export default function MusicPlayer() {
 
   // --- drag (pointer capture so the iframe can't swallow the drop) ---
   function onDragStart(e: React.PointerEvent) {
-    if (introMode) return; // no dragging during the intro
+    if (introMode || isPhone) return; // no dragging during the intro or on phones
     // Let buttons in the header (minimize, play) get their clicks; only drag
     // when grabbing the bar itself.
     if ((e.target as HTMLElement).closest("button")) return;
@@ -613,6 +624,8 @@ export default function MusicPlayer() {
     ? isSideways(vp.w, vp.h)
       ? { right: 8, bottom: 48, zIndex: 130 } // sideways phone: above the bottom ticker
       : { left: "50%", bottom: 48, transform: "translateX(-50%)", zIndex: 130 } // centered, above the bottom ticker
+    : isPhone
+    ? { left: "50%", bottom: 8, transform: "translateX(-50%)", zIndex: 50 } // phones: locked at the bottom
     : pos
     ? { left: pos.x, top: pos.y, zIndex: 50 }
     : { left: 24, top: defaultTop, zIndex: 50 };
@@ -631,7 +644,7 @@ export default function MusicPlayer() {
             onPointerMove={onDragMove}
             onPointerUp={onDragEnd}
             className={`flex touch-none items-center justify-between border-b border-white/10 bg-ink/80 px-3 py-2 ${
-              introMode ? "cursor-default" : "cursor-grab active:cursor-grabbing"
+              introMode || isPhone ? "cursor-default" : "cursor-grab active:cursor-grabbing"
             }`}
           >
             <span className="flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-wider text-silver">
