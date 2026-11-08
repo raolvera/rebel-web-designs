@@ -10,7 +10,11 @@ import { appendFileSync, writeFileSync } from "node:fs";
 import { FIELDS, isPolitical, stageOf, toPosts, token, xGet } from "./x-common.mjs";
 
 const bearer = token();
-if (!bearer) process.exit(0);
+if (!bearer) {
+  // the search action is useless without the secret: fail loudly
+  console.error("::error::The X_BEARER_TOKEN secret is missing (Settings -> Secrets and variables -> Actions).");
+  process.exit(1);
+}
 
 const MODE = process.env.X_MODE === "all" ? "all" : "recent"; // recent = last 7 days
 const PAGES = Math.min(10, Math.max(1, Number(process.env.X_PAGES) || 2));
@@ -44,7 +48,14 @@ for (let page = 0; page < PAGES; page++) {
   try {
     body = await xGet(path, params, bearer);
   } catch (e) {
-    console.error(String(e.message || e));
+    const msg = String(e.message || e);
+    if (page === 0) {
+      // nothing came back at all: fail the run (red X) so the reason is easy to see
+      console.error(`::error::${msg}`);
+      if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## X search failed\n\n\`${msg}\`\n`);
+      process.exit(1);
+    }
+    console.warn(`::warning::Stopped after page ${page}: ${msg}`);
     break;
   }
   reads += body.data?.length ?? 0;
