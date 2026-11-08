@@ -9,10 +9,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "all = all-time (best photos), recent = last 7 days only"
+        description: "likes = photos liked by the account below, all = search all-time art, recent = search last 7 days"
         type: choice
-        options: [all, recent]
-        default: all
+        options: [likes, all, recent]
+        default: likes
+      username:
+        description: "X account whose likes to use (likes mode)"
+        type: string
+        default: rebel_520
       pages:
         description: "Pages of 100 posts to read (about $0.50 per page)"
         type: number
@@ -35,6 +39,7 @@ jobs:
         env:
           X_BEARER_TOKEN: ${{ secrets.X_BEARER_TOKEN }}
           X_MODE: ${{ inputs.mode }}
+          X_USERNAME: ${{ inputs.username }}
           X_PAGES: ${{ inputs.pages }}
         run: node scripts/x-find.mjs
 
