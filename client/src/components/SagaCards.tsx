@@ -173,10 +173,10 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
       >
         {/* header */}
         <div className="flex items-center justify-between border-b border-white/10 bg-ink/70 px-3 py-2">
-          {/* card title color: The Chosen One = purple, Darth Vader = red */}
+          {/* card title color: The Chosen One = blue, Darth Vader = red */}
           <span
             className="font-display text-[11px] font-semibold uppercase tracking-wider"
-            style={{ color: saga ? "#a855f7" : "#e11d2a", textShadow: `0 0 8px ${saga ? "rgba(168,85,247,0.5)" : "rgba(225,29,42,0.5)"}` }}
+            style={{ color: saga ? "#3b82f6" : "#e11d2a", textShadow: `0 0 8px ${saga ? "rgba(59,130,246,0.5)" : "rgba(225,29,42,0.5)"}` }}
           >
             {title}
           </span>
