@@ -126,6 +126,8 @@ function vaderSlides(d: Data | null): Slide[] {
 
 const SLIDE_MS = 9000; // time on each card
 const MOVE_MS = 1400; // slow slide between cards
+// Distance of the side cards from the screen edge (desktop/laptop only).
+const SIDE_INSET = "clamp(24px, calc(24px + (100vw - 1280px) / 4), 72px)";
 
 function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[]; side: "left" | "right" | "stack"; saga?: boolean }) {
   const [idx, setIdx] = useState(0);
@@ -155,8 +157,11 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
       className={
         side === "stack"
           ? "relative w-full max-w-[320px]" // phones: in the page, one under the other
-          : `rwd-saga pointer-events-auto fixed top-1/2 z-[110] w-[260px] -translate-y-1/2 ${side === "left" ? "left-6" : "right-6"}`
+          : "rwd-saga pointer-events-auto fixed top-1/2 z-[110] w-[260px] -translate-y-1/2"
       }
+      // desktop/laptop: a tad closer to the center on wider screens, never
+      // over the title (24px at 1280 wide, ~64px at 1440, up to 72px)
+      style={side === "stack" ? undefined : { [side]: SIDE_INSET }}
     >
       <div
         className="overflow-hidden rounded-xl border border-silver/20 bg-coal/70 backdrop-blur-[3px]"
