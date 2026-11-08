@@ -75,16 +75,22 @@ function formatViews(n: number) {
 
 type Data = { posts: Partial<Record<Stage, XPost[]>> };
 
+// Loaded once and shared (the cards render in two places: beside the title on
+// wide screens, stacked under it on phones).
+let postsPromise: Promise<Data | null> | null = null;
+function loadPosts() {
+  postsPromise ??= fetch(`${import.meta.env.BASE_URL}x-posts.json`, { cache: "no-cache" })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((d) => (d && d.posts ? (d as Data) : null))
+    .catch(() => null);
+  return postsPromise;
+}
+
 function useXPosts() {
   const [data, setData] = useState<Data | null>(null);
   useEffect(() => {
     let alive = true;
-    fetch(`${import.meta.env.BASE_URL}x-posts.json`, { cache: "no-cache" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => alive && d && d.posts && setData(d))
-      .catch(() => {
-        /* no posts yet */
-      });
+    loadPosts().then((d) => alive && d && setData(d));
     return () => {
       alive = false;
     };
@@ -118,7 +124,7 @@ function vaderSlides(d: Data | null): Slide[] {
 const SLIDE_MS = 9000; // time on each card
 const MOVE_MS = 1400; // slow slide between cards
 
-function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[]; side: "left" | "right"; saga?: boolean }) {
+function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[]; side: "left" | "right" | "stack"; saga?: boolean }) {
   const [idx, setIdx] = useState(0);
   const [paused, setPaused] = useState(false);
   const timer = useRef<number | null>(null);
@@ -143,7 +149,11 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
       onBlur={() => setPaused(false)}
-      className={`rwd-saga pointer-events-auto fixed top-1/2 z-[110] w-[250px] -translate-y-1/2 ${side === "left" ? "left-6" : "right-6"}`}
+      className={
+        side === "stack"
+          ? "relative w-full max-w-[320px]" // phones: in the page, one under the other
+          : `rwd-saga pointer-events-auto fixed top-1/2 z-[110] w-[250px] -translate-y-1/2 ${side === "left" ? "left-6" : "right-6"}`
+      }
     >
       <div
         className="overflow-hidden rounded-xl border border-silver/20 bg-coal/70 backdrop-blur-[3px]"
@@ -286,11 +296,24 @@ function SlideBody({ slide }: { slide: Slide }) {
   );
 }
 
-export default function SagaCards() {
+/**
+ * Default: the two cards float beside the title (wide screens only).
+ * `stacked`: phones / smaller screens - the left card, then the right card,
+ * one under the other below the intro text.
+ */
+export default function SagaCards({ stacked }: { stacked?: boolean }) {
   const data = useXPosts();
   const preview = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("saga") === "preview";
   const hasPosts = !!data && Object.values(data.posts).some((l) => l && l.length);
   if (!hasPosts && !preview) return null; // nothing to show yet on the live site
+  if (stacked) {
+    return (
+      <div className="rwd-saga-stack relative mt-10 w-full flex-col items-center gap-6 px-4">
+        <Carousel title="The Chosen One" slides={sagaSlides(data)} side="stack" saga />
+        <Carousel title="Darth Vader" slides={vaderSlides(data)} side="stack" />
+      </div>
+    );
+  }
   return (
     <>
       <Carousel title="The Chosen One" slides={sagaSlides(data)} side="left" saga />

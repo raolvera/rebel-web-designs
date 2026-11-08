@@ -293,6 +293,9 @@ export default function Intro() {
       )}
       </div>
       </div>
+
+      {/* phones / smaller screens: the Star Wars cards stacked, left then right */}
+      <SagaCards stacked />
     </div>
   );
 }

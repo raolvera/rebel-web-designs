@@ -32,7 +32,8 @@ try {
   const body = await xGet("/tweets", params, bearer);
   const byId = new Map(toPosts(body).map((p) => [p.id, p]));
   const posts = {};
-  for (const s of stages) posts[s] = (picks[s] ?? []).map((id) => byId.get(id)).filter((p) => p && p.image);
+  // photos only (no video), and skip any post that was deleted
+  for (const s of stages) posts[s] = (picks[s] ?? []).map((id) => byId.get(id)).filter((p) => p && p.image && !p.isVideo);
   mkdirSync(new URL("../client/public/", import.meta.url), { recursive: true });
   writeFileSync(
     new URL("../client/public/x-posts.json", import.meta.url),

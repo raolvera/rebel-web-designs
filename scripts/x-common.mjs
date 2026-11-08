@@ -57,7 +57,24 @@ export function toPosts(body) {
 // Anything political gets dropped, even if the search let it through.
 const POLITICAL =
   /\b(trump|biden|harris|kamala|obama|maga|election|elections|vote|voting|democrat|democrats|republican|republicans|liberal|liberals|conservative|conservatives|woke|leftist|leftists|politic\w*|musk|elon|gop|dnc|congress|senate|president|immigra\w*|border|fascis\w*|communis\w*|socialis\w*|zoomer\w*|boomer\w*|millennial\w*|gen ?z|maxxing|propaganda|far[- ]right|far[- ]left|the left|the right|redpill\w*|groyper\w*|trad|tradwife|anakin[- ]?posting|they stole)\b/i;
-export const isPolitical = (text) => POLITICAL.test(text);
+// Words from the political "Anakin" meme trend that slipped through before.
+const TREND =
+  /\b(midterm\w*|chud\w*|kirk|soros|soro'?s|cuck\w*|gigachad|anakinwasright|hail ?the ?empire|long ?live ?the ?empire|longlivetheempire|virgin|prophesied)\b/i;
+// Ads and shop posts, not edits: crypto tokens, listings, pre-orders, unboxings.
+const PROMO =
+  /(\$[a-z]{2,}\b|\btoken\b|\bsolana\b|\bairdrop\b|\blisting\b|\bpre[- ]?order\w*|\bunboxing\b|\bnew arrival\b|\blive at\b)/i;
+// Account names that shouldn't show on a business site.
+const CRUDE = /(dick|cuck|porn|nsfw|fuck|shit|cum|sex|nazi|hitler)/i;
+
+// Corny / not-art: jokes and memes, toys and figures, cosplay, AI-made images,
+// crossover gags. Only real artwork from artists and designers should show.
+const CORNY =
+  /(\b(lol|lmao|lmfao|meme\w*|funny|joke\w*|shitpost\w*|toys?|figures?|figuarts|hot toys|lego|funko|unboxing|cosplay\w*|cosplayer\w*|ai|aiart|ai art|ai[- ]generated|midjourney|kling|stable diffusion|dall-?e|sora|grok|batman|will smith|hockey|burglar|homesick|crossover)\b|😂|🤣|💀)/i;
+
+export const isPolitical = (text) => POLITICAL.test(text) || TREND.test(text);
+export const isCorny = (text) => CORNY.test(text);
+export const isPromo = (text) => PROMO.test(text);
+export const isCrude = (username) => CRUDE.test(username || "");
 
 // Which card a post belongs on: Anakin, the fall, or Darth Vader.
 export function stageOf(text) {

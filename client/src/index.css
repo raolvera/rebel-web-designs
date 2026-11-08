@@ -580,8 +580,11 @@ body {
 /* --- Star Wars edit cards on the intro: only where there's room beside the
    title (wide, tall-enough screens); they float over the webs + circuits --- */
 .rwd-saga { display: none; }
+/* Phones and smaller screens: the cards stack under the intro text instead */
+.rwd-saga-stack { display: flex; }
 @media (min-width: 1280px) and (min-height: 700px) {
   .rwd-saga { display: block; }
+  .rwd-saga-stack { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .rwd-saga-slide { transition: none !important; }

@@ -1,5 +1,6 @@
-# Searches X for Star Wars fan edits (Anakin / the fall / Darth Vader), with
-# politics filtered out, ranked by views. It does NOT change the site: the
+# Searches X for Star Wars artwork by artists and graphic designers (Anakin /
+# the fall / Darth Vader), photos only, with politics, memes, toys, cosplay and
+# AI images filtered out, ranked by views. It does NOT change the site: the
 # results show on the run's summary page so you can pick which to display.
 # Uses the X_BEARER_TOKEN repository secret. Each post read is a paid X read.
 name: Find Star Wars edits on X
@@ -8,14 +9,14 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "recent = last 7 days (cheaper), all = all-time"
+        description: "all = all-time (best photos), recent = last 7 days only"
         type: choice
-        options: [recent, all]
-        default: recent
+        options: [all, recent]
+        default: all
       pages:
         description: "Pages of 100 posts to read (about $0.50 per page)"
         type: number
-        default: 2
+        default: 5
 
 permissions:
   contents: read
