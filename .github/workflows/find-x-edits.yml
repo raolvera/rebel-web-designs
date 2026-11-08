@@ -9,10 +9,10 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: "posts = your shares + those artists + similar artists, likes = same but from YOUR likes (needs 4 account-key secrets), all = search all-time art, recent = last 7 days"
+        description: "both = your reposts + your likes (likes need 4 account-key secrets), posts = reposts only, likes = likes only, all = search all-time art, recent = last 7 days"
         type: choice
-        options: [posts, likes, all, recent]
-        default: posts
+        options: [both, posts, likes, all, recent]
+        default: both
       username:
         description: "X account whose posts/reposts to use (posts mode)"
         type: string
