@@ -155,7 +155,7 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
       className={
         side === "stack"
           ? "relative w-full max-w-[320px]" // phones: in the page, one under the other
-          : `rwd-saga pointer-events-auto fixed top-1/2 z-[110] w-[250px] -translate-y-1/2 ${side === "left" ? "left-6" : "right-6"}`
+          : `rwd-saga pointer-events-auto fixed top-1/2 z-[110] w-[260px] -translate-y-1/2 ${side === "left" ? "left-6" : "right-6"}`
       }
     >
       <div
@@ -198,7 +198,7 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
         )}
 
         {/* slides (stacked; the active one slides + fades in slowly) */}
-        <div className="relative h-[290px]" aria-live="polite">
+        <div className="relative h-[390px]" aria-live="polite">
           {slides.map((s, i) => {
             const active = i === idx % n;
             const before = (i - (idx % n) + n) % n > n / 2; // already shown -> exits left
@@ -257,9 +257,13 @@ function SlideBody({ slide }: { slide: Slide }) {
   return (
     <>
       {/* media */}
-      <div className="relative h-[150px] overflow-hidden rounded-lg border border-white/10 bg-ink">
+      <div className="relative h-[250px] overflow-hidden rounded-lg border border-white/10 bg-ink">
         {p?.image ? (
-          <img src={p.image} alt={`${st.label} edit by @${p.username}`} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+          <>
+            {/* the whole photo, never cropped; a soft blurred copy fills the spare space */}
+            <img src={p.image} alt="" aria-hidden="true" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-md" />
+            <img src={p.image} alt={`${st.label} art by @${p.username}`} loading="lazy" referrerPolicy="no-referrer" className="relative h-full w-full object-contain" />
+          </>
         ) : (
           // placeholder: a glowing lightsaber in the stage's color
           <div className="flex h-full w-full flex-col items-center justify-center gap-3" style={{ background: `radial-gradient(circle at 50% 60%, ${st.glow}, transparent 70%)` }}>
