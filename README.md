@@ -40,6 +40,8 @@ removal, skin retouching, color correction, and photo restoration.
 Flyers, posters, brochures, and social graphics designed in InDesign and Photoshop, plus video
 editing in Premiere Pro for reels, promos, and ads.
 
+<!-- Pricing is hidden for now. Remove this comment's opening and closing lines to show it again.
+
 ## Pricing
 
 Rebel Web Designs offers discounted rates with clear, upfront pricing, so you know the cost
@@ -62,6 +64,8 @@ before the work begins.
 
 Fixed-price packages can be purchased securely on the website. Larger projects start with a
 free custom quote.
+
+-->
 
 ## Featured Work
 
