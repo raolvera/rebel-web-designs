@@ -49,10 +49,9 @@ const QUOTES: Record<Stage, string[]> = {
   // Anakin while he's still good (The Phantom Menace, Attack of the Clones, early Revenge of the Sith)
   anakin: [
     "This is where the fun begins.",
-    "Now this is podracing!",
-    "I'm not afraid.",
-    "I'm a person, and my name is Anakin.",
+    "Someday I will be the most powerful Jedi ever.",
     "Are you an angel?",
+    "I'm not afraid.",
     "I'll try spinning. That's a good trick!",
     "I will come back and free you, Mom. I promise.",
     "You said the biggest problem in the universe is no one helps each other.",
@@ -64,11 +63,11 @@ const QUOTES: Record<Stage, string[]> = {
     "You underestimate my power.",
     "From my point of view, the Jedi are evil!",
     "If you're not with me, then you're my enemy.",
-    "I killed them. I killed them all.",
-    "Not just the men, but the women and the children too.",
-    "Someday I will be the most powerful Jedi ever.",
+    "Is it possible to learn this power?",
+    "I'm becoming more powerful than any Jedi has ever dreamed of.",
+    "The Jedi turned against me. Don't you turn against me.",
     "It's all Obi-Wan's fault. He's jealous. He's holding me back.",
-    "I want more, and I know I shouldn't.",
+    "You will not take her from me!",
     "This is outrageous! It's unfair!",
     "I'm more powerful than the Chancellor. I can overthrow him.",
     "Just help me save Padmé's life. I can't live without her.",
@@ -82,8 +81,9 @@ const QUOTES: Record<Stage, string[]> = {
     "I see through the lies of the Jedi.",
     "I do not fear the dark side as you do.",
     "I have brought peace, freedom, justice, and security to my new Empire.",
-    "Don't make me kill you.",
+    "Don't make me destroy you.",
     "I hate you!",
+    "I shouldn't have done that. It's not the Jedi way.",
   ],
   vader: [
     // A New Hope
@@ -179,7 +179,7 @@ const MOOD: { re: RegExp; quote: string }[] = [
   { re: /obi[- ]?wan/i, quote: "The circle is now complete." },
   { re: /\(1977\)|new hope/i, quote: "I find your lack of faith disturbing." },
   { re: /empire strikes back|\(1980\)/i, quote: "Impressive. Most impressive." },
-  { re: /podrac|tatooine|little ani/i, quote: "Now this is podracing!" },
+  { re: /podrac|tatooine|little ani/i, quote: "I'm not afraid." },
 ];
 
 // The stage a post really shows (Maul / Sidious posts on the Vader card).
