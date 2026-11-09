@@ -26,6 +26,7 @@ export type XPost = {
   image?: string;
   images?: string[]; // every photo in the post
   isVideo?: boolean;
+  photoNo?: number; // which photo of the post this slide shows (1 = first)
 };
 
 type Slide = { stage: Stage; post?: XPost; quote: string };
@@ -54,7 +55,25 @@ const CHARACTER: Record<string, Stage> = {
 };
 
 // A quote picked for a post's scene (used unless another card already has it).
+// "id" = every photo in the post, "id#2" = just its 2nd photo.
 const SCENE: Record<string, string> = {
+  // @Aestheticsvault "The chosen one"
+  "2119424917686960296#1": "I sense Count Dooku.",
+  "2119424917686960296#2": "You said the biggest problem in the universe is no one helps each other.",
+  "2119424917686960296#3": "My powers have doubled since the last time we met, Count.",
+  // @Aestheticsvault "Anakin wallpapers"
+  "2119273174856593557#1": "I'm a Jedi. I know I'm better than this.",
+  "2119273174856593557#2": "I understand wanting to walk away from the Order.",
+  "2119273174856593557#3": "Not to worry, we are still flying half a ship.",
+  "2119273174856593557#4": "He must stand trial.",
+  "1879634666791002190": "Jedi business. Go back to your drinks.", // @StarWars 4K
+  "808426449627660293": "I will come back and free you, Mom. I promise.", // @iamlorengray
+  "2118807720551919915": "Obi-Wan's a great mentor, as wise as Master Yoda and as powerful as Master Windu.", // @anakinOnSol painting
+  // @Aestheticsvault "More Anakin wallpapers"
+  "2119736972608467142#1": "You're asking me to do something against the Jedi Code.",
+  "2119736972608467142#2": "I'll try spinning. That's a good trick!",
+  "2119736972608467142#3": "I need him.",
+  "2119736972608467142#4": "Chancellor Palpatine is a Sith Lord.",
   "2099699269884084411": "From the moment I met you, not a day has gone by when I haven't thought of you.", // the wedding
   "2103325805015339319": "Hold me, like you did by the lake on Naboo.", // the lake on Naboo
   "2103682181503898021": "I'm haunted by the kiss that you should never have given me.", // by the fireplace
@@ -74,6 +93,18 @@ const QUOTES: Record<Stage, string[]> = {
     "I'll try spinning. That's a good trick!",
     "I will come back and free you, Mom. I promise.",
     "You said the biggest problem in the universe is no one helps each other.",
+    "I sense Count Dooku.",
+    "My powers have doubled since the last time we met, Count.",
+    "Jedi business. Go back to your drinks.",
+    "Obi-Wan's a great mentor, as wise as Master Yoda and as powerful as Master Windu.",
+    "Not to worry, we are still flying half a ship.",
+    // still a Jedi, but torn (Attack of the Clones, The Clone Wars, Revenge of the Sith)
+    "I'm a Jedi. I know I'm better than this.",
+    "I understand wanting to walk away from the Order.",
+    "You're asking me to do something against the Jedi Code.",
+    "Chancellor Palpatine is a Sith Lord.",
+    "He must stand trial.",
+    "I need him.",
   ],
   // Anakin and Padmé, said to each other (Attack of the Clones, Revenge of the Sith)
   love: [
@@ -225,7 +256,8 @@ function withQuotes(list: { stage: Stage; post?: XPost }[]): Slide[] {
     const pool = QUOTES[stage];
     const seen = (used[stage] ??= new Set());
     if (seen.size >= pool.length) seen.clear(); // all used: start over
-    const scene = post && SCENE[post.id];
+    // a quote for this exact photo ("id#2" = 2nd photo), else for the whole post
+    const scene = post && (SCENE[`${post.id}#${post.photoNo ?? 1}`] ?? SCENE[post.id]);
     const mood = post && MOOD.find((m) => m.re.test(post.text) && pool.includes(m.quote) && !seen.has(m.quote));
     let quote = scene && pool.includes(scene) && !seen.has(scene) ? scene : mood?.quote;
     if (!quote) {
@@ -329,7 +361,9 @@ function ViewCount({ n }: { n: number }) {
 // A post with several photos becomes one slide per photo (same credit, views
 // and link on each).
 function eachPhoto(list: XPost[] = []): XPost[] {
-  return list.flatMap((p) => (p.images && p.images.length > 1 ? p.images.map((image) => ({ ...p, image })) : [p]));
+  return list.flatMap((p) =>
+    p.images && p.images.length > 1 ? p.images.map((image, i) => ({ ...p, image, photoNo: i + 1 })) : [{ ...p, photoNo: 1 }],
+  );
 }
 
 // Left card: Anakin and the fall alternate while both last, then the rest
