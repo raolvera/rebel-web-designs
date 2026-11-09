@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
  * with placeholders.
  */
 
-type Stage = "anakin" | "fall" | "vader" | "maul" | "sidious";
+type Stage = "anakin" | "love" | "fall" | "vader" | "maul" | "sidious";
 
 export type XPost = {
   id: string;
@@ -32,6 +32,8 @@ type Slide = { stage: Stage; post?: XPost; quote: string };
 
 const STAGES: Record<Stage, { label: string; glow: string; edge: string; core: string }> = {
   anakin: { label: "Anakin Skywalker", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
+  // Anakin + Padmé photos (still the good side, so the same blue)
+  love: { label: "Anakin & Padmé", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
   fall: { label: "The Fall", glow: "rgba(147,51,234,0.45)", edge: "#9333ea", core: "#e9d5ff" },
   vader: { label: "Darth Vader", glow: "rgba(225,29,42,0.5)", edge: "#e11d2a", core: "#fecaca" },
   maul: { label: "Darth Maul", glow: "rgba(220,38,38,0.55)", edge: "#dc2626", core: "#fee2e2" },
@@ -42,6 +44,21 @@ const STAGES: Record<Stage, { label: string; glow: string; edge: string; core: s
 const CHARACTER: Record<string, Stage> = {
   "2119038405560422663": "maul", // @24Kenva "DARTH MAUL"
   "2119571666393293174": "sidious", // @TheStarWarsOG Sith eye, Darth Sidious
+  // Anakin & Padmé posts on The Chosen One card (@dailyanidala)
+  "2099699269884084411": "love",
+  "2103325805015339319": "love",
+  "2103682181503898021": "love",
+  "2117575555289698590": "love",
+  "2119596459805007916": "love",
+};
+
+// A quote picked for a post's scene (used unless another card already has it).
+const SCENE: Record<string, string> = {
+  "2099699269884084411": "From the moment I met you, not a day has gone by when I haven't thought of you.", // the wedding
+  "2103325805015339319": "Hold me, like you did by the lake on Naboo.", // the lake on Naboo
+  "2103682181503898021": "I'm haunted by the kiss that you should never have given me.", // by the fireplace
+  "2117575555289698590": "I truly, deeply love you.", // chained in the Geonosis arena
+  "2119596459805007916": "You are asking me to be rational. That is something I know I cannot do.", // the Naboo retreat
 };
 
 // Real lines from the films / shows, so every card gets its own quote.
@@ -55,8 +72,19 @@ const QUOTES: Record<Stage, string[]> = {
     "I'll try spinning. That's a good trick!",
     "I will come back and free you, Mom. I promise.",
     "You said the biggest problem in the universe is no one helps each other.",
-    "You are asking me to be rational. That is something I know I cannot do.",
+  ],
+  // Anakin and Padmé, said to each other (Attack of the Clones, Revenge of the Sith)
+  love: [
     "From the moment I met you, not a day has gone by when I haven't thought of you.",
+    "Hold me, like you did by the lake on Naboo.",
+    "I'm haunted by the kiss that you should never have given me.",
+    "I truly, deeply love you.",
+    "You are asking me to be rational. That is something I know I cannot do.",
+    "You're so beautiful.",
+    "No, it's because I'm so in love with you.",
+    "My heart is beating, hoping that kiss will not become a scar.",
+    "Ani? My goodness, you've grown.",
+    "You'll always be that little boy I knew on Tatooine.",
   ],
   // turning to the dark side (Attack of the Clones, Revenge of the Sith)
   fall: [
@@ -196,8 +224,9 @@ function withQuotes(list: { stage: Stage; post?: XPost }[]): Slide[] {
     const pool = QUOTES[stage];
     const seen = (used[stage] ??= new Set());
     if (seen.size >= pool.length) seen.clear(); // all used: start over
+    const scene = post && SCENE[post.id];
     const mood = post && MOOD.find((m) => m.re.test(post.text) && pool.includes(m.quote) && !seen.has(m.quote));
-    let quote = mood?.quote;
+    let quote = scene && pool.includes(scene) && !seen.has(scene) ? scene : mood?.quote;
     if (!quote) {
       let i = next[stage] ?? 0;
       while (seen.has(pool[i % pool.length])) i++;
@@ -310,7 +339,7 @@ function sagaSlides(d: Data | null): Slide[] {
   if (!anakin.length && !fall.length) return withQuotes([{ stage: "anakin" }, { stage: "fall" }]);
   const out: { stage: Stage; post?: XPost }[] = [];
   for (let r = 0; r < Math.max(anakin.length, fall.length); r++) {
-    if (anakin[r]) out.push({ stage: "anakin", post: anakin[r] });
+    if (anakin[r]) out.push({ stage: stageOf(anakin[r], "anakin"), post: anakin[r] });
     if (fall[r]) out.push({ stage: "fall", post: fall[r] });
   }
   return withQuotes(out);
@@ -398,7 +427,7 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
             purple into the fall, purple -> blue back to Anakin. */}
         {saga && (
           <div className="flex items-center gap-1.5 px-3 pt-2.5" aria-hidden="true">
-            <SagaDot on={cur.stage === "anakin"} color={STAGES.anakin.edge} />
+            <SagaDot on={cur.stage !== "fall"} color={STAGES.anakin.edge} />
             <span className="relative h-px flex-1 bg-white/10">
               {moves > 0 && (
                 <span key={moves} className={cur.stage === "fall" ? "rwd-saga-beam rwd-saga-beam-in" : "rwd-saga-beam rwd-saga-beam-out"} />
