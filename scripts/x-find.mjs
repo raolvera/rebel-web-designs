@@ -310,7 +310,10 @@ function table(title, prefix, list) {
   if (!list.length) return out + "_Nothing found this run._\n\n";
   out += "| # | Photo | From | Views | Account | Post | ID |\n|---|---|---|---:|---|---|---|\n";
   list.forEach((p, i) => {
-    const thumb = `<a href="${p.url}"><img src="${p.image}" width="140" alt=""></a>`;
+    // every photo in the post (all of them go on the card)
+    const imgs = p.images?.length ? p.images : [p.image];
+    const w = imgs.length > 1 ? 66 : 140;
+    const thumb = `<a href="${p.url}">${imgs.map((src) => `<img src="${src}" width="${w}" alt="">`).join(" ")}</a>${imgs.length > 1 ? `<br>${imgs.length} photos` : ""}`;
     const from = { yours: "you reposted", liked: "you liked", artist: "same artist", similar: "similar artist" }[p.source] ?? "search";
     out += `| **${prefix}${i + 1}** | ${thumb} | ${from} | ${fmt(p.views)} | @${p.username} | [${esc(p.text) || "(no text)"}](${p.url}) | ${p.id} |\n`;
   });

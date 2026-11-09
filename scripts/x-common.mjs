@@ -79,8 +79,11 @@ export function toPosts(body) {
   const users = new Map((body.includes?.users ?? []).map((u) => [u.id, u]));
   return (body.data ?? []).map((t) => {
     const user = users.get(t.author_id) ?? {};
-    const m = (t.attachments?.media_keys ?? []).map((k) => media.get(k)).find(Boolean);
-    const isVideo = m?.type === "video" || m?.type === "animated_gif";
+    const all = (t.attachments?.media_keys ?? []).map((k) => media.get(k)).filter(Boolean);
+    // EVERY photo in the post (posts can have up to 4), not just the first
+    const images = all.filter((m) => m.type === "photo").map((m) => m.url ?? m.preview_image_url).filter(Boolean);
+    // a video-only post counts as video; a post with photos uses the photos
+    const isVideo = !images.length && all.some((m) => m.type === "video" || m.type === "animated_gif");
     return {
       id: t.id,
       url: `https://x.com/${user.username ?? "i"}/status/${t.id}`,
@@ -89,7 +92,8 @@ export function toPosts(body) {
       username: user.username ?? "",
       views: t.public_metrics?.impression_count ?? 0,
       likes: t.public_metrics?.like_count ?? 0,
-      image: m ? (isVideo ? m.preview_image_url : m.url ?? m.preview_image_url) : undefined,
+      image: images[0] ?? (isVideo ? all[0]?.preview_image_url : undefined),
+      images,
       isVideo,
     };
   });

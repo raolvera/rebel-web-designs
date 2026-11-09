@@ -1,5 +1,8 @@
 {
   "_how": "Post IDs to show on the intro cards, in order. Get IDs from Actions -> 'Find Star Wars edits on X'. anakin + fall = left card, vader = right card. New picks get added after these.",
+  "_credits": "owner = the site's own X account: its name never shows on a card. credits = post id -> the original artist's handle, for photos the owner uploaded.",
+  "owner": "Rebel_520",
+  "credits": {},
   "anakin": [
     "2119058955813155264",
     "2117345361757155682",

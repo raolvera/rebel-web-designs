@@ -34,6 +34,25 @@ try {
   const posts = {};
   // photos only (no video), and skip any post that was deleted
   for (const s of stages) posts[s] = (picks[s] ?? []).map((id) => byId.get(id)).filter((p) => p && p.image && !p.isVideo);
+
+  // Credit the original creator, never the site owner's account:
+  //  - "credits" in x-picks.json: post id -> the artist's handle (shown instead)
+  //  - otherwise a photo the owner uploaded themselves shows no name
+  // (Reposts and likes are already the original post, so they credit the artist.)
+  const owner = String(picks.owner ?? "").replace(/^@/, "").toLowerCase();
+  const credits = picks.credits ?? {};
+  for (const s of stages) {
+    for (const p of posts[s]) {
+      const c = credits[p.id];
+      if (c) {
+        p.username = String(c).replace(/^@/, "");
+        p.author = "";
+      } else if (owner && p.username.toLowerCase() === owner) {
+        p.username = "";
+        p.author = "";
+      }
+    }
+  }
   mkdirSync(new URL("../client/public/", import.meta.url), { recursive: true });
   writeFileSync(
     new URL("../client/public/x-posts.json", import.meta.url),

@@ -24,6 +24,7 @@ export type XPost = {
   username: string;
   views: number;
   image?: string;
+  images?: string[]; // every photo in the post
   isVideo?: boolean;
 };
 
@@ -101,10 +102,16 @@ function useXPosts() {
   return data;
 }
 
+// A post with several photos becomes one slide per photo (same credit, views
+// and link on each).
+function eachPhoto(list: XPost[] = []): XPost[] {
+  return list.flatMap((p) => (p.images && p.images.length > 1 ? p.images.map((image) => ({ ...p, image })) : [p]));
+}
+
 // Left card: Anakin, then the fall, round after round (Vader is on the right).
 function sagaSlides(d: Data | null): Slide[] {
-  const anakin = d?.posts.anakin ?? [];
-  const fall = d?.posts.fall ?? [];
+  const anakin = eachPhoto(d?.posts.anakin);
+  const fall = eachPhoto(d?.posts.fall);
   const rounds = Math.max(1, anakin.length, fall.length);
   const out: Slide[] = [];
   for (let r = 0; r < rounds; r++) {
@@ -118,7 +125,7 @@ function sagaSlides(d: Data | null): Slide[] {
 
 // Right card: Darth Vader edits.
 function vaderSlides(d: Data | null): Slide[] {
-  const list = d?.posts.vader ?? [];
+  const list = eachPhoto(d?.posts.vader);
   if (!list.length) return [0, 1, 2].map((i) => ({ stage: "vader", quote: QUOTES.vader[i] }));
   return list.map((post, i) => ({ stage: "vader", post, quote: pickQuote("vader", i, post) }));
 }
@@ -288,7 +295,7 @@ function SlideBody({ slide }: { slide: Slide }) {
           <>
             {/* the whole photo, never cropped; a soft blurred copy fills the spare space */}
             <img src={p.image} alt="" aria-hidden="true" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-md" />
-            <img src={p.image} alt={`${st.label} art by @${p.username}`} loading="lazy" referrerPolicy="no-referrer" className="relative h-full w-full object-contain" />
+            <img src={p.image} alt={p.username ? `${st.label} art by @${p.username}` : `${st.label} art`} loading="lazy" referrerPolicy="no-referrer" className="relative h-full w-full object-contain" />
           </>
         ) : (
           // placeholder: a glowing lightsaber in the stage's color
@@ -325,7 +332,8 @@ function SlideBody({ slide }: { slide: Slide }) {
 
       {/* credit */}
       <div className="mt-auto flex items-center justify-between pt-2 text-[11px]">
-        <span className="truncate text-ash">{p ? `@${p.username}` : "Rebel Web Designs"}</span>
+        {/* the original creator's handle (blank if the artist isn't known) */}
+        <span className="truncate text-ash">{p ? (p.username ? `@${p.username}` : "") : "Rebel Web Designs"}</span>
         {p && (
           <a href={p.url} target="_blank" rel="noopener noreferrer" className="shrink-0 font-semibold text-silver underline-offset-2 hover:underline">
             View on X
