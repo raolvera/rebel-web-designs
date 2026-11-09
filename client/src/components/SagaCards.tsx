@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
  * with placeholders.
  */
 
-type Stage = "anakin" | "fall" | "vader";
+type Stage = "anakin" | "fall" | "vader" | "maul" | "sidious";
 
 export type XPost = {
   id: string;
@@ -34,21 +34,141 @@ const STAGES: Record<Stage, { label: string; glow: string; edge: string; core: s
   anakin: { label: "Anakin Skywalker", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
   fall: { label: "The Fall", glow: "rgba(147,51,234,0.45)", edge: "#9333ea", core: "#e9d5ff" },
   vader: { label: "Darth Vader", glow: "rgba(225,29,42,0.5)", edge: "#e11d2a", core: "#fecaca" },
+  maul: { label: "Darth Maul", glow: "rgba(220,38,38,0.55)", edge: "#dc2626", core: "#fee2e2" },
+  sidious: { label: "Darth Sidious", glow: "rgba(245,158,11,0.45)", edge: "#f59e0b", core: "#fef3c7" },
 };
 
-// Short, well-known lines for each stage.
+// Posts on the Vader card that show a different Sith (labeled + quoted as them).
+const CHARACTER: Record<string, Stage> = {
+  "2119038405560422663": "maul", // @24Kenva "DARTH MAUL"
+  "2119571666393293174": "sidious", // @TheStarWarsOG Sith eye, Darth Sidious
+};
+
+// Real lines from the films / shows, so every card gets its own quote.
 const QUOTES: Record<Stage, string[]> = {
-  anakin: ["This is where the fun begins.", "I'm not afraid.", "I'll be the most powerful Jedi ever."],
+  // Anakin while he's still good (The Phantom Menace, Attack of the Clones, early Revenge of the Sith)
+  anakin: [
+    "This is where the fun begins.",
+    "Now this is podracing!",
+    "I'm not afraid.",
+    "I'm a person, and my name is Anakin.",
+    "Are you an angel?",
+    "I'll try spinning. That's a good trick!",
+    "I will come back and free you, Mom. I promise.",
+    "You said the biggest problem in the universe is no one helps each other.",
+    "You are asking me to be rational. That is something I know I cannot do.",
+    "From the moment I met you, not a day has gone by when I haven't thought of you.",
+  ],
+  // turning to the dark side (Attack of the Clones, Revenge of the Sith)
   fall: [
     "You underestimate my power.",
-    "From my point of view, the Jedi are evil.",
+    "From my point of view, the Jedi are evil!",
     "If you're not with me, then you're my enemy.",
+    "I killed them. I killed them all.",
+    "Not just the men, but the women and the children too.",
+    "Someday I will be the most powerful Jedi ever.",
+    "It's all Obi-Wan's fault. He's jealous. He's holding me back.",
+    "I want more, and I know I shouldn't.",
+    "This is outrageous! It's unfair!",
+    "I'm more powerful than the Chancellor. I can overthrow him.",
+    "Just help me save Padmé's life. I can't live without her.",
+    "I will do whatever you ask.",
+    "I pledge myself to your teachings.",
+    "What have I done?",
+    "Love won't save you, Padmé. Only my new powers can do that.",
+    "Together, you and I can rule the galaxy.",
+    "You turned her against me!",
+    "Don't lecture me, Obi-Wan.",
+    "I see through the lies of the Jedi.",
+    "I do not fear the dark side as you do.",
+    "I have brought peace, freedom, justice, and security to my new Empire.",
+    "Don't make me kill you.",
+    "I hate you!",
   ],
   vader: [
+    // A New Hope
     "I find your lack of faith disturbing.",
-    "No, I am your father.",
-    "Don't make me destroy you.",
+    "The Force is strong with this one.",
+    "I have you now.",
     "The circle is now complete.",
+    "When I left you, I was but the learner. Now I am the master.",
+    "Your powers are weak, old man.",
+    "I've been waiting for you, Obi-Wan. We meet again, at last.",
+    "Don't be too proud of this technological terror you've constructed.",
+    "The ability to destroy a planet is insignificant next to the power of the Force.",
+    "This will be a day long remembered.",
+    "Leave them to me. I will deal with them myself.",
+    "I sense something. A presence I've not felt since...",
+    "Escape is not his plan. I must face him alone.",
+    "He is here.",
+    "You should not have come back.",
+    "Commander, tear this ship apart until you've found those plans.",
+    "Where are those transmissions you intercepted?",
+    "Stay in attack formation!",
+    "I'll take them myself. Cover me.",
+    "Don't act so surprised, Your Highness.",
+    "Don't play games with me, Your Highness.",
+    // The Empire Strikes Back
+    "No, I am your father.",
+    "There is no escape. Don't make me destroy you.",
+    "Impressive. Most impressive.",
+    "Obi-Wan has taught you well.",
+    "You have failed me for the last time, Admiral.",
+    "Apology accepted, Captain Needa.",
+    "I am altering the deal. Pray I don't alter it any further.",
+    "If you only knew the power of the dark side.",
+    "Join me, and together we can rule the galaxy as father and son.",
+    "Search your feelings. You know it to be true.",
+    "All too easy.",
+    "You are beaten. It is useless to resist.",
+    "Asteroids do not concern me, Admiral. I want that ship, not excuses.",
+    "No disintegrations.",
+    "We would be honored if you would join us.",
+    "Perhaps you think you're being treated unfairly?",
+    "The Force is with you, young Skywalker. But you are not a Jedi yet.",
+    "Luke, you can destroy the Emperor. He has foreseen this.",
+    "It is your destiny.",
+    "Don't let yourself be destroyed as Obi-Wan did.",
+    "You have learned much, young one.",
+    "You are in command now, Admiral Piett.",
+    "Bring my shuttle.",
+    "Calrissian, take the princess and the Wookiee to my ship.",
+    // Return of the Jedi
+    "The Emperor is not as forgiving as I am.",
+    "You may dispense with the pleasantries, Commander.",
+    "The Emperor does not share your optimistic appraisal of the situation.",
+    "I hope so, Commander, for your sake.",
+    "Indeed you are powerful, as the Emperor has foreseen.",
+    "Obi-Wan once thought as you do.",
+    "You don't know the power of the dark side. I must obey my master.",
+    "It is too late for me, son.",
+    "Your thoughts betray you. Your feelings for them are strong.",
+    "If you will not turn to the dark side, then perhaps she will.",
+    "You cannot hide forever, Luke.",
+    "So, you have a twin sister.",
+    "There is no conflict.",
+    "The Emperor will show you the true nature of the Force.",
+    "Luke, help me take this mask off.",
+    "Just for once, let me look on you with my own eyes.",
+    "You were right about me. Tell your sister you were right.",
+    // Revenge of the Sith, Rogue One
+    "Yes, my Master.",
+    "Where is Padmé? Is she safe? Is she all right?",
+    "Be careful not to choke on your aspirations, Director.",
+  ],
+  // The Phantom Menace, The Clone Wars, Rebels
+  maul: [
+    "At last we will reveal ourselves to the Jedi.",
+    "At last we will have revenge.",
+    "Once more the Sith will rule the galaxy, and we shall have peace.",
+    "Tell me, is he the Chosen One?",
+  ],
+  // Revenge of the Sith, Return of the Jedi
+  sidious: [
+    "Unlimited power!",
+    "Execute Order Sixty-Six.",
+    "Everything that has transpired has done so according to my design.",
+    "Now, young Skywalker, you will die.",
   ],
 };
 
@@ -56,16 +176,40 @@ const QUOTES: Record<Stage, string[]> = {
 const MOOD: { re: RegExp; quote: string }[] = [
   { re: /mustafar|high ground/i, quote: "You underestimate my power." },
   { re: /father|luke/i, quote: "No, I am your father." },
-  { re: /hallway|rogue one/i, quote: "Don't make me destroy you." },
   { re: /obi[- ]?wan/i, quote: "The circle is now complete." },
-  { re: /podrac|tatooine|little ani/i, quote: "I'm not afraid." },
+  { re: /\(1977\)|new hope/i, quote: "I find your lack of faith disturbing." },
+  { re: /empire strikes back|\(1980\)/i, quote: "Impressive. Most impressive." },
+  { re: /podrac|tatooine|little ani/i, quote: "Now this is podracing!" },
 ];
 
-function pickQuote(stage: Stage, i: number, post?: XPost) {
-  const mood = post && MOOD.find((m) => m.re.test(post.text));
-  // only use a mood line if it belongs to this stage
-  if (mood && QUOTES[stage].includes(mood.quote)) return mood.quote;
-  return QUOTES[stage][i % QUOTES[stage].length];
+// The stage a post really shows (Maul / Sidious posts on the Vader card).
+function stageOf(post: XPost | undefined, fallback: Stage): Stage {
+  return (post && CHARACTER[post.id]) || fallback;
+}
+
+/**
+ * Gives every slide on a card its own quote: a line that fits the caption if
+ * there is one, otherwise the next unused line for that character. Lines only
+ * repeat if a card ever has more photos than that character has quotes.
+ */
+function withQuotes(list: { stage: Stage; post?: XPost }[]): Slide[] {
+  const used: Partial<Record<Stage, Set<string>>> = {};
+  const next: Partial<Record<Stage, number>> = {};
+  return list.map(({ stage, post }) => {
+    const pool = QUOTES[stage];
+    const seen = (used[stage] ??= new Set());
+    if (seen.size >= pool.length) seen.clear(); // all used: start over
+    const mood = post && MOOD.find((m) => m.re.test(post.text) && pool.includes(m.quote) && !seen.has(m.quote));
+    let quote = mood?.quote;
+    if (!quote) {
+      let i = next[stage] ?? 0;
+      while (seen.has(pool[i % pool.length])) i++;
+      quote = pool[i % pool.length];
+      next[stage] = i + 1;
+    }
+    seen.add(quote);
+    return { stage, post, quote };
+  });
 }
 
 function formatViews(n: number) {
@@ -110,27 +254,20 @@ function eachPhoto(list: XPost[] = []): XPost[] {
 function sagaSlides(d: Data | null): Slide[] {
   const anakin = eachPhoto(d?.posts.anakin);
   const fall = eachPhoto(d?.posts.fall);
-  if (!anakin.length && !fall.length) {
-    return [
-      { stage: "anakin", quote: pickQuote("anakin", 0) },
-      { stage: "fall", quote: pickQuote("fall", 0) },
-    ];
-  }
-  const out: Slide[] = [];
+  if (!anakin.length && !fall.length) return withQuotes([{ stage: "anakin" }, { stage: "fall" }]);
+  const out: { stage: Stage; post?: XPost }[] = [];
   for (let r = 0; r < Math.max(anakin.length, fall.length); r++) {
-    const a = anakin[r];
-    const f = fall[r];
-    if (a) out.push({ stage: "anakin", post: a, quote: pickQuote("anakin", r, a) });
-    if (f) out.push({ stage: "fall", post: f, quote: pickQuote("fall", r, f) });
+    if (anakin[r]) out.push({ stage: "anakin", post: anakin[r] });
+    if (fall[r]) out.push({ stage: "fall", post: fall[r] });
   }
-  return out;
+  return withQuotes(out);
 }
 
-// Right card: Darth Vader edits.
+// Right card: Darth Vader edits (plus a couple of other Sith, labeled as them).
 function vaderSlides(d: Data | null): Slide[] {
   const list = eachPhoto(d?.posts.vader);
-  if (!list.length) return [0, 1, 2].map((i) => ({ stage: "vader", quote: QUOTES.vader[i] }));
-  return list.map((post, i) => ({ stage: "vader", post, quote: pickQuote("vader", i, post) }));
+  if (!list.length) return withQuotes([0, 1, 2].map(() => ({ stage: "vader" as Stage })));
+  return withQuotes(list.map((post) => ({ stage: stageOf(post, "vader"), post })));
 }
 
 const SLIDE_MS = 9000; // time on each card
