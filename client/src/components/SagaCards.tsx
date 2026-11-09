@@ -61,12 +61,12 @@ const QUOTES: Record<Stage, string[]> = {
   // turning to the dark side (Attack of the Clones, Revenge of the Sith)
   fall: [
     "You underestimate my power.",
-    "From my point of view, the Jedi are evil!",
+    "I shouldn't have done that. It's not the Jedi way.",
     "If you're not with me, then you're my enemy.",
     "Is it possible to learn this power?",
     "I'm becoming more powerful than any Jedi has ever dreamed of.",
     "The Jedi turned against me. Don't you turn against me.",
-    "It's all Obi-Wan's fault. He's jealous. He's holding me back.",
+    "From my point of view, the Jedi are evil!",
     "You will not take her from me!",
     "This is outrageous! It's unfair!",
     "I'm more powerful than the Chancellor. I can overthrow him.",
@@ -83,7 +83,6 @@ const QUOTES: Record<Stage, string[]> = {
     "I have brought peace, freedom, justice, and security to my new Empire.",
     "Don't make me destroy you.",
     "I hate you!",
-    "I shouldn't have done that. It's not the Jedi way.",
   ],
   vader: [
     // A New Hope
