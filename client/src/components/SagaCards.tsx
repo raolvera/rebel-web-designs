@@ -74,6 +74,8 @@ const SCENE: Record<string, string> = {
   "2119736972608467142#2": "I'll try spinning. That's a good trick!",
   "2119736972608467142#3": "I need him.",
   "2119736972608467142#4": "Chancellor Palpatine is a Sith Lord.",
+  // Darth Vader card: the first photo
+  "2114866265894326344": "I find your lack of faith disturbing.", // @XDarthThunderX "Lord Vader is iconic"
   "2099699269884084411": "From the moment I met you, not a day has gone by when I haven't thought of you.", // the wedding
   "2103325805015339319": "Hold me, like you did by the lake on Naboo.", // the lake on Naboo
   "2103682181503898021": "I'm haunted by the kiss that you should never have given me.", // by the fireplace
