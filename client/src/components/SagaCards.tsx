@@ -105,17 +105,23 @@ function eachPhoto(list: XPost[] = []): XPost[] {
   return list.flatMap((p) => (p.images && p.images.length > 1 ? p.images.map((image) => ({ ...p, image })) : [p]));
 }
 
-// Left card: Anakin, then the fall, round after round (Vader is on the right).
+// Left card: Anakin and the fall alternate while both last, then the rest
+// play once each, so no photo repeats within a loop (Vader is on the right).
 function sagaSlides(d: Data | null): Slide[] {
   const anakin = eachPhoto(d?.posts.anakin);
   const fall = eachPhoto(d?.posts.fall);
-  const rounds = Math.max(1, anakin.length, fall.length);
+  if (!anakin.length && !fall.length) {
+    return [
+      { stage: "anakin", quote: pickQuote("anakin", 0) },
+      { stage: "fall", quote: pickQuote("fall", 0) },
+    ];
+  }
   const out: Slide[] = [];
-  for (let r = 0; r < rounds; r++) {
-    const a = anakin.length ? anakin[r % anakin.length] : undefined;
-    const f = fall.length ? fall[r % fall.length] : undefined;
-    out.push({ stage: "anakin", post: a, quote: pickQuote("anakin", r, a) });
-    out.push({ stage: "fall", post: f, quote: pickQuote("fall", r, f) });
+  for (let r = 0; r < Math.max(anakin.length, fall.length); r++) {
+    const a = anakin[r];
+    const f = fall[r];
+    if (a) out.push({ stage: "anakin", post: a, quote: pickQuote("anakin", r, a) });
+    if (f) out.push({ stage: "fall", post: f, quote: pickQuote("fall", r, f) });
   }
   return out;
 }
