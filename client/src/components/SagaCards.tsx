@@ -220,27 +220,83 @@ function formatViews(n: number) {
 
 type Data = { posts: Partial<Record<Stage, XPost[]>> };
 
-// Loaded once and shared (the cards render in two places: beside the title on
-// wide screens, stacked under it on phones).
-let postsPromise: Promise<Data | null> | null = null;
-function loadPosts() {
-  postsPromise ??= fetch(`${import.meta.env.BASE_URL}x-posts.json`, { cache: "no-cache" })
-    .then((r) => (r.ok ? r.json() : null))
-    .then((d) => (d && d.posts ? (d as Data) : null))
-    .catch(() => null);
-  return postsPromise;
+// Shared by both card layouts (beside the title on wide screens, stacked under
+// it on phones). The site refreshes x-posts.json every 30 minutes, so while
+// the page is open we re-check it every few minutes and the view counts climb
+// to the new numbers without a reload.
+const REFRESH_MS = 3 * 60 * 1000;
+let shared: Data | null = null;
+let lastFetch = 0;
+let polling = false;
+const listeners = new Set<(d: Data) => void>();
+
+async function refreshPosts() {
+  lastFetch = Date.now();
+  try {
+    const r = await fetch(`${import.meta.env.BASE_URL}x-posts.json?t=${lastFetch}`, { cache: "no-store" });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (!d || !d.posts) return;
+    shared = d as Data;
+    listeners.forEach((l) => l(shared!));
+  } catch {
+    // offline or blocked: keep showing what we have
+  }
+}
+
+function startPolling() {
+  if (polling) return;
+  polling = true;
+  refreshPosts();
+  window.setInterval(() => {
+    if (!document.hidden) refreshPosts();
+  }, REFRESH_MS);
+  // coming back to the tab: catch up if it's been a while
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && Date.now() - lastFetch > 60_000) refreshPosts();
+  });
 }
 
 function useXPosts() {
-  const [data, setData] = useState<Data | null>(null);
+  const [data, setData] = useState<Data | null>(shared);
   useEffect(() => {
-    let alive = true;
-    loadPosts().then((d) => alive && d && setData(d));
+    listeners.add(setData);
+    startPolling();
+    if (shared) setData(shared);
     return () => {
-      alive = false;
+      listeners.delete(setData);
     };
   }, []);
   return data;
+}
+
+// The view count: when a newer count comes in, it climbs up to it.
+function ViewCount({ n }: { n: number }) {
+  const [shown, setShown] = useState(n);
+  const from = useRef(n);
+  useEffect(() => {
+    const start = from.current;
+    if (start === n) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || n < start) {
+      from.current = n;
+      setShown(n);
+      return;
+    }
+    const t0 = performance.now();
+    const DUR = 1800;
+    let raf = 0;
+    const step = (t: number) => {
+      const k = Math.min(1, (t - t0) / DUR);
+      const v = Math.round(start + (n - start) * (1 - Math.pow(1 - k, 3)));
+      from.current = v;
+      setShown(v);
+      if (k < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [n]);
+  return <>{formatViews(shown)}</>;
 }
 
 // A post with several photos becomes one slide per photo (same credit, views
@@ -460,7 +516,7 @@ function SlideBody({ slide }: { slide: Slide }) {
               <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
               <circle cx="12" cy="12" r="3" />
             </svg>
-            {formatViews(p.views)} views
+            <ViewCount n={p.views} /> views
           </span>
         )}
       </div>

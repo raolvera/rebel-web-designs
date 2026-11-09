@@ -7,9 +7,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  # Rebuild once a day so the Star Wars cards' view counts stay fresh.
+  # Rebuild every 30 minutes so the Star Wars cards' view counts keep up as
+  # they rise. X bills each post once per UTC day however often it's read, so
+  # this costs the same as one refresh a day. (GitHub can run scheduled jobs
+  # a little late when it's busy.)
   schedule:
-    - cron: "17 9 * * *"
+    - cron: "17,47 * * * *"
 
 permissions:
   contents: read

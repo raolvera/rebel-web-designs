@@ -1,7 +1,8 @@
-// Runs on every deploy (and once a day): looks up the posts you picked in
-// scripts/x-picks.json and writes their latest view counts + images to
+// Runs on every deploy (and every 30 minutes): looks up the posts you picked
+// in scripts/x-picks.json and writes their latest view counts + images to
 // client/public/x-posts.json, which the intro cards read.
-// Cost: one paid read per picked post per run (about $0.005 each).
+// Cost: one paid read per picked post (about $0.005 each), billed once per
+// UTC day per post, so re-reading the same posts later that day is free.
 // Never fails the deploy: on any problem it logs a warning and the cards
 // simply stay hidden.
 
@@ -53,6 +54,19 @@ try {
       }
     }
   }
+  // Leave out photos listed in "skipPhotos" (post id -> photo numbers, 1 = first),
+  // e.g. a photo that's a duplicate of art already on a card.
+  const skip = picks.skipPhotos ?? {};
+  for (const s of stages) {
+    for (const p of posts[s]) {
+      const drop = skip[p.id];
+      if (!Array.isArray(drop) || !p.images?.length) continue;
+      p.images = p.images.filter((_, i) => !drop.includes(i + 1));
+      p.image = p.images[0];
+    }
+    posts[s] = posts[s].filter((p) => p.image);
+  }
+
   mkdirSync(new URL("../client/public/", import.meta.url), { recursive: true });
   writeFileSync(
     new URL("../client/public/x-posts.json", import.meta.url),

@@ -3,6 +3,10 @@
   "_credits": "owner = the site's own X account: its name never shows on a card. credits = post id -> the original artist's handle, for photos the owner uploaded.",
   "owner": "Rebel_520",
   "credits": {},
+  "_skipPhotos": "skipPhotos = post id -> which photos of that post to leave out (1 = first photo), e.g. duplicates of art already on a card.",
+  "skipPhotos": {
+    "2110158785104744738": [2, 3]
+  },
   "anakin": [
     "2116612499894063326",
     "2117003919226294331",
@@ -22,7 +26,8 @@
     "2118352385986986265",
     "2119587326233845986",
     "2117130187309768821",
-    "2118005293657244006"
+    "2118005293657244006",
+    "2119703665011269733"
   ],
   "vader": [
     "2112609010809729457",
@@ -51,7 +56,6 @@
     "2119150863436730736",
     "2119471210794733730",
     "2119038405560422663",
-    "2119571666393293174",
-    "2119703665011269733"
+    "2119571666393293174"
   ]
 }
