@@ -68,9 +68,6 @@ function pickQuote(stage: Stage, i: number, post?: XPost) {
   return QUOTES[stage][i % QUOTES[stage].length];
 }
 
-// Only show the view badge once a post has real reach ("7 views" looks weak).
-const MIN_VIEWS_BADGE = 1000;
-
 function formatViews(n: number) {
   if (n >= 1e6) return `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(n >= 1e4 ? 0 : 1)}K`;
@@ -313,7 +310,8 @@ function SlideBody({ slide }: { slide: Slide }) {
             </span>
           </span>
         )}
-        {p && p.views >= MIN_VIEWS_BADGE && (
+        {/* every card shows its view count */}
+        {p && (
           <span className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded-full bg-ink/80 px-2 py-0.5 text-[10px] font-semibold text-silver">
             <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
               <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
