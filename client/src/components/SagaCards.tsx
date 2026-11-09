@@ -74,6 +74,7 @@ const SCENE: Record<string, string> = {
   "2119736972608467142#2": "I'll try spinning. That's a good trick!",
   "2119736972608467142#3": "I need him.",
   "2119736972608467142#4": "Chancellor Palpatine is a Sith Lord.",
+  "2119497452617359833": "Thank you, my Master.", // @The__Comedian__ "Long Live the Empire" (the fall)
   // Darth Vader card: the first photo
   "2114866265894326344": "I find your lack of faith disturbing.", // @XDarthThunderX "Lord Vader is iconic"
   "2099699269884084411": "From the moment I met you, not a day has gone by when I haven't thought of you.", // the wedding
@@ -145,6 +146,7 @@ const QUOTES: Record<Stage, string[]> = {
     "I have brought peace, freedom, justice, and security to my new Empire.",
     "Don't make me destroy you.",
     "I won't let this one become real.",
+    "Thank you, my Master.",
   ],
   vader: [
     // A New Hope
