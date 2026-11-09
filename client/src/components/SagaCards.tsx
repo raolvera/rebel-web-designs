@@ -61,7 +61,7 @@ const QUOTES: Record<Stage, string[]> = {
   // turning to the dark side (Attack of the Clones, Revenge of the Sith)
   fall: [
     "You underestimate my power.",
-    "I shouldn't have done that. It's not the Jedi way.",
+    "You will try.",
     "If you're not with me, then you're my enemy.",
     "Is it possible to learn this power?",
     "I'm becoming more powerful than any Jedi has ever dreamed of.",
@@ -82,14 +82,14 @@ const QUOTES: Record<Stage, string[]> = {
     "I do not fear the dark side as you do.",
     "I have brought peace, freedom, justice, and security to my new Empire.",
     "Don't make me destroy you.",
-    "I hate you!",
+    "I won't let this one become real.",
   ],
   vader: [
     // A New Hope
     "I find your lack of faith disturbing.",
     "The Force is strong with this one.",
     "I have you now.",
-    "The circle is now complete.",
+    "Be careful not to choke on your aspirations, Director.",
     "When I left you, I was but the learner. Now I am the master.",
     "Your powers are weak, old man.",
     "I've been waiting for you, Obi-Wan. We meet again, at last.",
@@ -111,7 +111,7 @@ const QUOTES: Record<Stage, string[]> = {
     "No, I am your father.",
     "There is no escape. Don't make me destroy you.",
     "Impressive. Most impressive.",
-    "Yes, my Master.",
+    "The circle is now complete.",
     "You have failed me for the last time, Admiral.",
     "Apology accepted, Captain Needa.",
     "I am altering the deal. Pray I don't alter it any further.",
@@ -152,7 +152,6 @@ const QUOTES: Record<Stage, string[]> = {
     "You were right about me. Tell your sister you were right.",
     // Revenge of the Sith, Rogue One
     "Where is Padmé? Is she safe? Is she all right?",
-    "Be careful not to choke on your aspirations, Director.",
   ],
   // The Phantom Menace, The Clone Wars, Rebels
   maul: [
