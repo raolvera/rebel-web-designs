@@ -50,6 +50,7 @@ const CHARACTER: Record<string, Stage> = {
   "2103682181503898021": "love",
   "2117575555289698590": "love",
   "2119596459805007916": "love",
+  "2117445477264498971": "love", // @anakinOnSol
 };
 
 // A quote picked for a post's scene (used unless another card already has it).
@@ -59,6 +60,7 @@ const SCENE: Record<string, string> = {
   "2103682181503898021": "I'm haunted by the kiss that you should never have given me.", // by the fireplace
   "2117575555289698590": "I truly, deeply love you.", // chained in the Geonosis arena
   "2119596459805007916": "You're so beautiful.", // the Naboo retreat
+  "2117445477264498971": "I don't like sand. It's coarse and rough and irritating, and it gets everywhere.", // the lake balcony, right before the first kiss
 };
 
 // Real lines from the films / shows, so every card gets its own quote.
@@ -80,6 +82,7 @@ const QUOTES: Record<Stage, string[]> = {
     "I'm haunted by the kiss that you should never have given me.",
     "I truly, deeply love you.",
     "You're so beautiful.",
+    "I don't like sand. It's coarse and rough and irritating, and it gets everywhere.",
     "No, it's because I'm so in love with you.",
     "My heart is beating, hoping that kiss will not become a scar.",
     "Ani? My goodness, you've grown.",
