@@ -86,7 +86,7 @@ const QUOTES: Record<Stage, string[]> = {
   ],
   vader: [
     // A New Hope
-    "I find your lack of faith disturbing.",
+    "Leave them to me. I will deal with them myself.",
     "The Force is strong with this one.",
     "I have you now.",
     "Be careful not to choke on your aspirations, Director.",
@@ -96,7 +96,7 @@ const QUOTES: Record<Stage, string[]> = {
     "Don't be too proud of this technological terror you've constructed.",
     "The ability to destroy a planet is insignificant next to the power of the Force.",
     "This will be a day long remembered.",
-    "Leave them to me. I will deal with them myself.",
+    "I find your lack of faith disturbing.",
     "I sense something. A presence I've not felt since...",
     "Escape is not his plan. I must face him alone.",
     "He is here.",
@@ -174,7 +174,7 @@ const MOOD: { re: RegExp; quote: string }[] = [
   { re: /mustafar|high ground/i, quote: "You underestimate my power." },
   { re: /father|luke/i, quote: "No, I am your father." },
   { re: /obi[- ]?wan/i, quote: "The circle is now complete." },
-  { re: /\(1977\)|new hope/i, quote: "I find your lack of faith disturbing." },
+  { re: /\(1977\)|new hope/i, quote: "Leave them to me. I will deal with them myself." },
   { re: /empire strikes back|\(1980\)/i, quote: "Impressive. Most impressive." },
   { re: /podrac|tatooine|little ani/i, quote: "I'm not afraid." },
 ];
