@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
  * with placeholders.
  */
 
-type Stage = "anakin" | "love" | "fall" | "vader" | "maul" | "sidious";
+type Stage = "anakin" | "love" | "padme" | "fall" | "vader" | "maul" | "sidious";
 
 export type XPost = {
   id: string;
@@ -34,6 +34,7 @@ const STAGES: Record<Stage, { label: string; glow: string; edge: string; core: s
   anakin: { label: "Anakin Skywalker", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
   // Anakin + Padmé photos (still the good side, so the same blue)
   love: { label: "Anakin & Padmé", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
+  padme: { label: "Padmé Amidala", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
   fall: { label: "The Fall", glow: "rgba(147,51,234,0.45)", edge: "#9333ea", core: "#e9d5ff" },
   vader: { label: "Darth Vader", glow: "rgba(225,29,42,0.5)", edge: "#e11d2a", core: "#fecaca" },
   maul: { label: "Darth Maul", glow: "rgba(220,38,38,0.55)", edge: "#dc2626", core: "#fee2e2" },
@@ -51,6 +52,7 @@ const CHARACTER: Record<string, Stage> = {
   "2117575555289698590": "love",
   "2119596459805007916": "love",
   "2117445477264498971": "love", // @anakinOnSol
+  "2116884495840460804": "padme", // @anakinOnSol, just Padmé
 };
 
 // A quote picked for a post's scene (used unless another card already has it).
@@ -61,6 +63,7 @@ const SCENE: Record<string, string> = {
   "2117575555289698590": "I truly, deeply love you.", // chained in the Geonosis arena
   "2119596459805007916": "You're so beautiful.", // the Naboo retreat
   "2117445477264498971": "My heart is beating, hoping that kiss will not become a scar.", // the lake balcony on Naboo
+  "2116884495840460804": "Anakin, you're breaking my heart.", // Padmé
 };
 
 // Real lines from the films / shows, so every card gets its own quote.
@@ -86,6 +89,12 @@ const QUOTES: Record<Stage, string[]> = {
     "My heart is beating, hoping that kiss will not become a scar.",
     "Ani? My goodness, you've grown.",
     "You'll always be that little boy I knew on Tatooine.",
+  ],
+  // Padmé on her own (Revenge of the Sith)
+  padme: [
+    "Anakin, you're breaking my heart.",
+    "So this is how liberty dies, with thunderous applause.",
+    "There's still good in him.",
   ],
   // turning to the dark side (Attack of the Clones, Revenge of the Sith)
   fall: [
