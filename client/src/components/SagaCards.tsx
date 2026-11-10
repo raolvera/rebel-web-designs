@@ -79,7 +79,7 @@ const SCENE: Record<string, string> = {
   "2119273174856593557#4": "He must stand trial.",
   "1879634666791002190": "Jedi business. Go back to your drinks.", // @StarWars 4K
   "808426449627660293": "I will come back and free you, Mom. I promise.", // @iamlorengray
-  "2118807720551919915": "Victory belongs to the most persevering.", // @anakinOnSol painting, Anakin as Napoleon (Napoleon's line)
+  "2118807720551919915": "Impossible is a word to be found only in the dictionary of fools.", // @anakinOnSol painting, Anakin as Napoleon (Napoleon's line)
   // @Aestheticsvault "More Anakin wallpapers"
   "2119736972608467142#1": "You're asking me to do something against the Jedi Code.",
   "2119736972608467142#2": "I'll try spinning. That's a good trick!",
@@ -121,7 +121,7 @@ const QUOTES: Record<Stage, string[]> = {
     "I sense Count Dooku.",
     "My powers have doubled since the last time we met, Count.",
     "Jedi business. Go back to your drinks.",
-    "Victory belongs to the most persevering.", // Napoleon, for the Napoleon painting
+    "Impossible is a word to be found only in the dictionary of fools.", // Napoleon, for the Napoleon painting
     "Not to worry, we are still flying half a ship.",
     // still a Jedi, but torn (Attack of the Clones, The Clone Wars, Revenge of the Sith)
     "I'm a Jedi. I know I'm better than this.",
