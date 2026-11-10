@@ -88,7 +88,7 @@ const SCENE: Record<string, string> = {
   "2116610703776002104": "I'm here, Mom. You're safe.", // @dogeofficialceo, the Tusken camp
   "2118238059657560512": "We need a system where the politicians sit down and discuss the problem.", // @anakinOnSol town hall painting
   "2118814725740077100": "The ability to speak does not make you intelligent.", // Qui-Gon (the line on the photo)
-  "2118823624865964305": "Help me, Obi-Wan Kenobi. You're my only hope.", // R2-D2
+  "2118823624865964305": "Beep boop beep bweeeep!", // R2-D2
   "2118458856057737351": "Chewie, we're home.", // Chewbacca
   "2118743072930676755#1": "Do what must be done, Lord Vader. Do not hesitate. Show no mercy.", // "Never Forget", Order 66
   "2118743072930676755#2": "You were the Chosen One!", // "What They Took From You", Mustafar
@@ -136,8 +136,8 @@ const QUOTES: Record<Stage, string[]> = {
     "Your focus determines your reality.",
     "There's always a bigger fish.",
   ],
-  // R2-D2 only beeps, so: the message he carried (A New Hope)
-  r2: ["Help me, Obi-Wan Kenobi. You're my only hope."],
+  // R2-D2 talks in beeps
+  r2: ["Beep boop beep bweeeep!"],
   // Chewbacca only roars, so: Han to Chewie (The Force Awakens, The Empire Strikes Back)
   chewie: ["Chewie, we're home.", "Laugh it up, fuzzball."],
   // Anakin and Padmé, said to each other (Attack of the Clones, Revenge of the Sith)
