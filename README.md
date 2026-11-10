@@ -86,7 +86,7 @@ free custom quote.
 
 - **Rebel, the AI assistant:** ask questions about services and pricing anytime and get instant answers.
 - **Rebel Radio:** a built-in music player that keeps playing as you explore the site.
-- **The Arcade:** four free browser games made by Rebel Web Designs, including Rebel Runner, Rebel Outlaw, Rebel: Base Siege, and Rebel: First Contact.
+- **The Arcade:** a free browser game made by Rebel Web Designs, Rebel Runner.
 
 ## Let's Build Something Iconic
 
