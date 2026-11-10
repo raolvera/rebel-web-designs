@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
  * with placeholders.
  */
 
-type Stage = "anakin" | "love" | "jedi" | "r2" | "chewie" | "fall" | "vader" | "maul" | "sidious";
+type Stage = "anakin" | "platinum" | "love" | "jedi" | "r2" | "chewie" | "fall" | "vader" | "maul" | "sidious";
 
 export type XPost = {
   id: string;
@@ -34,6 +34,8 @@ type Slide = { stage: Stage; post?: XPost; quote: string };
 
 const STAGES: Record<Stage, { label: string; glow: string; edge: string; core: string }> = {
   anakin: { label: "Anakin Skywalker", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
+  // Rebel Web Designs' own chrome Anakin (platinum / Mandalorian steel): silver name
+  platinum: { label: "Anakin Skywalker", glow: "rgba(226,232,240,0.45)", edge: "#e2e8f0", core: "#f8fafc" },
   // Anakin + Padmé photos (still the good side, so the same blue)
   love: { label: "Anakin & Padmé", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
   // other characters on The Chosen One card (Jedi get a green name, like a green lightsaber)
@@ -58,6 +60,7 @@ const CHARACTER: Record<string, Stage> = {
   "2119596459805007916": "love",
   "2117445477264498971": "love", // @anakinOnSol
   "2118814725740077100": "jedi", // @Isaac556x45 Qui-Gon
+  "2120123325280309704": "platinum", // @Rebel_520's own chrome Anakin
   "2118823624865964305": "r2", // @agustin02565697 R2-D2
   "2118458856057737351": "chewie", // @agustin02565697 Chewbacca
 };
@@ -89,6 +92,7 @@ const SCENE: Record<string, string> = {
   "2118238059657560512": "We need a system where the politicians sit down and discuss the problem.", // @anakinOnSol town hall painting
   "2118814725740077100": "The ability to speak does not make you intelligent.", // Qui-Gon (the line on the photo)
   "2118823624865964305": "Whoooaaaaaahhhhh!", // R2-D2's scream
+  "2120123325280309704": "He is the Chosen One. He will bring balance.", // @Rebel_520 chrome Anakin
   "2118458856057737351": "Chewie, we're home.", // Chewbacca
   "2118743072930676755#1": "Do what must be done, Lord Vader. Do not hesitate. Show no mercy.", // "Never Forget", Order 66
   "2118743072930676755#2": "You were the Chosen One!", // "What They Took From You", Mustafar
@@ -129,6 +133,8 @@ const QUOTES: Record<Stage, string[]> = {
     "I'm here, Mom. You're safe.",
     "We need a system where the politicians sit down and discuss the problem.",
   ],
+  // the chrome Anakin: Qui-Gon on who Anakin is (The Phantom Menace)
+  platinum: ["He is the Chosen One. He will bring balance.", "The Force is unusually strong with him."],
   // Qui-Gon Jinn (The Phantom Menace)
   jedi: [
     "The ability to speak does not make you intelligent.",

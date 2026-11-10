@@ -2,7 +2,9 @@
   "_how": "Post IDs to show on the intro cards, in order. Get IDs from Actions -> 'Find Star Wars edits on X'. anakin + fall = left card, vader = right card. New picks get added after these.",
   "_credits": "owner = the site's own X account: its name never shows on a card. credits = post id -> the original artist's handle, for photos the owner uploaded.",
   "owner": "Rebel_520",
-  "credits": {},
+  "credits": {
+    "2120123325280309704": "Rebel_520"
+  },
   "_skipPhotos": "skipPhotos = post id -> which photos of that post to leave out (1 = first photo), e.g. duplicates of art already on a card.",
   "skipPhotos": {
     "2110158785104744738": [2, 3],
@@ -31,7 +33,8 @@
     "2118238059657560512",
     "2118814725740077100",
     "2118823624865964305",
-    "2118458856057737351"
+    "2118458856057737351",
+    "2120123325280309704"
   ],
   "fall": [
     "2118458907416780846",
