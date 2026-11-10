@@ -14,7 +14,7 @@ import { useEffect, useRef, useState } from "react";
  * with placeholders.
  */
 
-type Stage = "anakin" | "love" | "fall" | "vader" | "maul" | "sidious";
+type Stage = "anakin" | "love" | "jedi" | "r2" | "chewie" | "fall" | "vader" | "maul" | "sidious";
 
 export type XPost = {
   id: string;
@@ -23,6 +23,7 @@ export type XPost = {
   author: string;
   username: string;
   views: number;
+  likes?: number;
   image?: string;
   images?: string[]; // every photo in the post
   isVideo?: boolean;
@@ -35,6 +36,10 @@ const STAGES: Record<Stage, { label: string; glow: string; edge: string; core: s
   anakin: { label: "Anakin Skywalker", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
   // Anakin + Padmé photos (still the good side, so the same blue)
   love: { label: "Anakin & Padmé", glow: "rgba(56,139,253,0.45)", edge: "#3b82f6", core: "#bfdbfe" },
+  // other characters on The Chosen One card (Jedi get a green name, like a green lightsaber)
+  jedi: { label: "Qui-Gon Jinn", glow: "rgba(34,197,94,0.45)", edge: "#22c55e", core: "#bbf7d0" },
+  r2: { label: "R2-D2", glow: "rgba(56,139,253,0.45)", edge: "#60a5fa", core: "#dbeafe" },
+  chewie: { label: "Chewbacca", glow: "rgba(217,119,6,0.45)", edge: "#d97706", core: "#fde68a" },
   fall: { label: "The Fall", glow: "rgba(147,51,234,0.45)", edge: "#9333ea", core: "#e9d5ff" },
   vader: { label: "Darth Vader", glow: "rgba(225,29,42,0.5)", edge: "#e11d2a", core: "#fecaca" },
   maul: { label: "Darth Maul", glow: "rgba(220,38,38,0.55)", edge: "#dc2626", core: "#fee2e2" },
@@ -52,6 +57,9 @@ const CHARACTER: Record<string, Stage> = {
   "2117575555289698590": "love",
   "2119596459805007916": "love",
   "2117445477264498971": "love", // @anakinOnSol
+  "2118814725740077100": "jedi", // @Isaac556x45 Qui-Gon
+  "2118823624865964305": "r2", // @agustin02565697 R2-D2
+  "2118458856057737351": "chewie", // @agustin02565697 Chewbacca
 };
 
 // A quote picked for a post's scene (used unless another card already has it).
@@ -77,6 +85,14 @@ const SCENE: Record<string, string> = {
   "2119497452617359833": "Thank you, my Master.", // @The__Comedian__ "Long Live the Empire" (the fall)
   "2117130187309768821": "I will even learn to stop people from dying.", // @SlytherinQueenl "We'll Have Our Home Again"
   "2116990933103509723": "I have brought peace, freedom, justice, and security to my new Empire.", // @elonmusk throne room
+  "2116610703776002104": "I'm here, Mom. You're safe.", // @dogeofficialceo, the Tusken camp
+  "2118238059657560512": "We need a system where the politicians sit down and discuss the problem.", // @anakinOnSol town hall painting
+  "2118814725740077100": "The ability to speak does not make you intelligent.", // Qui-Gon (the line on the photo)
+  "2118823624865964305": "Help me, Obi-Wan Kenobi. You're my only hope.", // R2-D2
+  "2118458856057737351": "Chewie, we're home.", // Chewbacca
+  "2118743072930676755#1": "Do what must be done, Lord Vader. Do not hesitate. Show no mercy.", // "Never Forget", Order 66
+  "2118743072930676755#2": "You were the Chosen One!", // "What They Took From You", Mustafar
+  "2117398386571919403": "The dark side of the Force is a pathway to many abilities some consider to be unnatural.", // "Tolerance is not a Sith virtue"
   // Darth Vader card: the first photo
   "2114866265894326344": "I find your lack of faith disturbing.", // @XDarthThunderX "Lord Vader is iconic"
   "2099699269884084411": "From the moment I met you, not a day has gone by when I haven't thought of you.", // the wedding
@@ -110,7 +126,20 @@ const QUOTES: Record<Stage, string[]> = {
     "Chancellor Palpatine is a Sith Lord.",
     "He must stand trial.",
     "I need him.",
+    "I'm here, Mom. You're safe.",
+    "We need a system where the politicians sit down and discuss the problem.",
   ],
+  // Qui-Gon Jinn (The Phantom Menace)
+  jedi: [
+    "The ability to speak does not make you intelligent.",
+    "He is the Chosen One. He will bring balance. Train him.",
+    "Your focus determines your reality.",
+    "There's always a bigger fish.",
+  ],
+  // R2-D2 only beeps, so: the message he carried (A New Hope)
+  r2: ["Help me, Obi-Wan Kenobi. You're my only hope."],
+  // Chewbacca only roars, so: Han to Chewie (The Force Awakens, The Empire Strikes Back)
+  chewie: ["Chewie, we're home.", "Laugh it up, fuzzball."],
   // Anakin and Padmé, said to each other (Attack of the Clones, Revenge of the Sith)
   love: [
     "From the moment I met you, not a day has gone by when I haven't thought of you.",
@@ -150,6 +179,10 @@ const QUOTES: Record<Stage, string[]> = {
     "I won't let this one become real.",
     "Thank you, my Master.",
     "I have brought peace, freedom, justice, and security to my new Empire.",
+    // said TO Anakin as he turns (Revenge of the Sith)
+    "Do what must be done, Lord Vader. Do not hesitate. Show no mercy.",
+    "You were the Chosen One!",
+    "The dark side of the Force is a pathway to many abilities some consider to be unnatural.",
   ],
   vader: [
     // A New Hope
@@ -577,14 +610,26 @@ function SlideBody({ slide }: { slide: Slide }) {
             </span>
           </span>
         )}
-        {/* every card shows its view count */}
+        {/* every card shows its view count. Posts from before X counted views
+            (late 2022) report 0, so those show their likes instead. */}
         {p && (
           <span className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded-full bg-ink/80 px-2 py-0.5 text-[10px] font-semibold text-silver">
-            <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-              <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            <ViewCount n={p.views} /> views
+            {p.views > 0 || !p.likes ? (
+              <>
+                <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <ViewCount n={p.views} /> views
+              </>
+            ) : (
+              <>
+                <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                  <path d="M12 21s-7-4.5-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9Z" />
+                </svg>
+                <ViewCount n={p.likes} /> likes
+              </>
+            )}
           </span>
         )}
       </div>
