@@ -126,12 +126,19 @@ export default function MusicPlayer() {
     };
   }, []);
 
-  // Laptops (wide but short screens): MD/LG would cover the intro's logo and
-  // text, so only SM is offered there. Bigger screens keep all three sizes;
-  // a size picked on a big screen comes back when the window is big again.
+  // Laptops (wide but short screens): a taller MD/LG would cover the intro's
+  // logo and text, so there MD/LG only get WIDER and keep SM's height.
   const isLaptop = !isPhone && vp.w >= 1024 && vp.h < 800;
-  const videoSize = isLaptop ? "sm" : chosenSize;
-  const sizeOptions = isLaptop ? (["sm"] as const) : (["sm", "md", "lg"] as const);
+  const videoSize = chosenSize;
+  const sizeOptions = ["sm", "md", "lg"] as const;
+  // How far in from each screen edge the intro's side cards reach (0 when
+  // they aren't at the sides), so the wider laptop player stays between them.
+  const [cardsEdge, setCardsEdge] = useState<number>(() => (window as any).__rebelCardsEdge || 0);
+  useEffect(() => {
+    const on = (e: Event) => setCardsEdge((e as CustomEvent<{ edge: number }>).detail?.edge || 0);
+    window.addEventListener("rebel-cards-fit", on);
+    return () => window.removeEventListener("rebel-cards-fit", on);
+  }, []);
 
   // Report the card's real height (it changes with SM/MD/LG, video on/off,
   // minimize) so the intro can keep its text clear of the player.
@@ -606,15 +613,25 @@ export default function MusicPlayer() {
   // Width capped to the viewport, and also to the screen HEIGHT so the whole
   // card (controls ~150px + video) fits on short screens like sideways phones.
   const maxByHeight = Math.max(160, (vp.h - 170) / 0.62);
-  const vidW = Math.min(DIMS[videoSize], vw - 32, maxByHeight);
+  const smW = Math.min(DIMS.sm, vw - 32, maxByHeight);
+  // Laptops: MD/LG are wider but exactly as tall as SM, and never wider than
+  // the gap between the intro's side cards (16px clear of each card).
+  const LAPTOP_DIMS = { sm: smW, md: 420, lg: 600 } as const;
+  const laptopRoom = vw - 2 * cardsEdge - 32;
+  const vidW = isLaptop
+    ? Math.max(smW, Math.min(LAPTOP_DIMS[videoSize], laptopRoom))
+    : Math.min(DIMS[videoSize], vw - 32, maxByHeight);
   // Balanced height — fuller than 16:9 but not a tall strip. ~0.62x width.
-  const vidH = Math.round(vidW * 0.62);
+  // (Laptops keep SM's height at every size.)
+  const vidH = Math.round((isLaptop ? smW : vidW) * 0.62);
 
   // Bigger, readable text whenever the video window is open (scales up with the
   // size; still fits on phones — the card width is capped and the title truncates).
-  const titleSize = !showVideo ? "text-[11px]" : videoSize === "lg" ? "text-lg" : videoSize === "md" ? "text-base" : "text-sm";
-  const metaSize = !showVideo ? "text-[11px]" : videoSize === "lg" ? "text-sm" : videoSize === "md" ? "text-xs" : "text-[11px]";
-  const btnSize = !showVideo ? "text-[10px]" : videoSize === "lg" ? "text-xs" : videoSize === "md" ? "text-[11px]" : "text-[10px]";
+  // On laptops the text stays at the SM size too, so the card doesn't grow taller.
+  const textSize = isLaptop ? "sm" : videoSize;
+  const titleSize = !showVideo ? "text-[11px]" : textSize === "lg" ? "text-lg" : textSize === "md" ? "text-base" : "text-sm";
+  const metaSize = !showVideo ? "text-[11px]" : textSize === "lg" ? "text-sm" : textSize === "md" ? "text-xs" : "text-[11px]";
+  const btnSize = !showVideo ? "text-[10px]" : textSize === "lg" ? "text-xs" : textSize === "md" ? "text-[11px]" : "text-[10px]";
 
   // Rough height of the whole card so we can anchor it by its TOP and keep it
   // low on screen. Growing the video then expands the card DOWNWARD instead of

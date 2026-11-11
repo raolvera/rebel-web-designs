@@ -466,6 +466,11 @@ function measureFit() {
   if (next.fits !== fit.fits || Math.abs(next.scale - fit.scale) > 0.005 || Math.abs(next.inset - fit.inset) > 0.5) {
     fit = next;
     fitListeners.forEach((l) => l(fit));
+    // tell the music player how far in from each edge the cards reach, so a
+    // wider laptop player stays between them (0 = cards aren't at the sides)
+    const edge = fit.fits ? Math.ceil(fit.inset + CARD_W * fit.scale) : 0;
+    (window as any).__rebelCardsEdge = edge;
+    window.dispatchEvent(new CustomEvent("rebel-cards-fit", { detail: { edge } }));
   }
 }
 
