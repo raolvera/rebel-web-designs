@@ -580,15 +580,12 @@ body {
   .rwd-skull-eye { animation: none; fill: #e11d2a; }
 }
 
-/* --- Star Wars edit cards on the intro: only where there's room beside the
-   title (wide, tall-enough screens); they float over the webs + circuits --- */
-.rwd-saga { display: none; }
-/* Phones and smaller screens: the cards stack under the intro text instead */
+/* --- Star Wars edit cards on the intro: beside the title wherever there's
+   room (desktops + laptops, shrunk a little on smaller laptops), floating over
+   the webs + circuits. SagaCards measures the screen and picks the layout;
+   phones and narrow windows get the stacked cards under the intro text. --- */
+.rwd-saga { display: block; }
 .rwd-saga-stack { display: flex; }
-@media (min-width: 1280px) and (min-height: 700px) {
-  .rwd-saga { display: block; }
-  .rwd-saga-stack { display: none; }
-}
 @media (prefers-reduced-motion: reduce) {
   .rwd-saga-slide { transition: none !important; }
 }

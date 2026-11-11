@@ -433,12 +433,79 @@ function vaderSlides(d: Data | null): Slide[] {
   return withQuotes(list.map((post) => ({ stage: stageOf(post, "vader"), post })));
 }
 
+/**
+ * Do the cards fit beside the title, and how big? Measured from the real
+ * screen: the space left and right of the "REBEL WEB DESIGNS" title, and the
+ * height between the top and bottom tickers. On laptops the cards shrink a
+ * little to fit there; only when even a shrunk card won't fit (phones,
+ * narrow windows) do they stack under the intro text instead.
+ */
+const CARD_W = 260; // card width at full size (px)
+const TICKER_SPACE = 40 + 12; // each ticker + a little air above/below the card
+const TITLE_GAP = 20; // px kept between a card and the title
+const MIN_SCALE = 0.72; // smaller than this and the cards stack instead
+
+type SideFit = { fits: boolean; scale: number; inset: number };
+let fit: SideFit = { fits: false, scale: 1, inset: 25 };
+let fitWatching = false;
+const fitListeners = new Set<(f: SideFit) => void>();
+
+function measureFit() {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  // distance from the screen edge (same as before on 1280px+, a bit less below)
+  const inset = Math.min(95, Math.max(16, 25 + (vw - 1280) * 0.27));
+  // the widest thing in the middle column is the title
+  const title = document.querySelector<HTMLElement>("h1[data-circuit-avoid]")?.getBoundingClientRect();
+  const titleW = title?.width || Math.min(vw * 0.5, 720);
+  const card = document.querySelector<HTMLElement>(".rwd-saga");
+  const cardH = card?.offsetHeight || 500; // unscaled height
+  const free = (vw - titleW) / 2 - TITLE_GAP - inset;
+  const scale = Math.min(1, free / CARD_W, (vh - 2 * TICKER_SPACE) / cardH);
+  const next = { fits: vw >= 900 && scale >= MIN_SCALE, scale: Math.min(1, Math.max(MIN_SCALE, scale)), inset };
+  if (next.fits !== fit.fits || Math.abs(next.scale - fit.scale) > 0.005 || Math.abs(next.inset - fit.inset) > 0.5) {
+    fit = next;
+    fitListeners.forEach((l) => l(fit));
+  }
+}
+
+function watchFit() {
+  if (fitWatching) return;
+  fitWatching = true;
+  let raf = 0;
+  const soon = () => {
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(measureFit);
+  };
+  measureFit();
+  window.addEventListener("resize", soon);
+  window.addEventListener("orientationchange", soon);
+  window.addEventListener("rebel-player-size", () => window.setTimeout(soon, 350)); // title size follows the player
+  // the intro animates in and the fonts load, so check again as it settles
+  [300, 1000, 2000, 3200].forEach((ms) => window.setTimeout(soon, ms));
+  const h1 = document.querySelector("h1[data-circuit-avoid]");
+  if (h1) new ResizeObserver(soon).observe(h1);
+}
+
+function useSideFit() {
+  const [f, setF] = useState<SideFit>(fit);
+  useEffect(() => {
+    fitListeners.add(setF);
+    watchFit();
+    setF(fit);
+    return () => {
+      fitListeners.delete(setF);
+    };
+  }, []);
+  return f;
+}
+
 const SLIDE_MS = 9000; // time on each card
 const MOVE_MS = 1400; // slow slide between cards
 // Distance of the side cards from the screen edge (desktop/laptop only).
 const SIDE_INSET = "clamp(25px, calc(25px + (100vw - 1280px) * 0.27), 95px)";
 
-function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[]; side: "left" | "right" | "stack"; saga?: boolean }) {
+function Carousel({ title, slides, side, saga, fitTo }: { title: string; slides: Slide[]; side: "left" | "right" | "stack"; saga?: boolean; fitTo?: SideFit }) {
   const [idx, setIdx] = useState(0);
   const [moves, setMoves] = useState(0); // counts changes (restarts the saga beam)
   const [paused, setPaused] = useState(false);
@@ -471,11 +538,19 @@ function Carousel({ title, slides, side, saga }: { title: string; slides: Slide[
       className={
         side === "stack"
           ? "relative w-full max-w-[320px]" // phones: in the page, one under the other
-          : "rwd-saga pointer-events-auto fixed top-1/2 z-[110] w-[260px] -translate-y-1/2"
+          : "rwd-saga pointer-events-auto fixed top-1/2 z-[110] w-[260px]"
       }
-      // desktop/laptop: a tad closer to the center on wider screens, never
-      // over the title (24px at 1280 wide, ~64px at 1440, up to 72px)
-      style={side === "stack" ? undefined : { [side]: SIDE_INSET }}
+      // desktop/laptop: beside the title, a tad closer to the center on wider
+      // screens; on smaller laptops scaled down (from its outer edge) to fit
+      style={
+        side === "stack"
+          ? undefined
+          : {
+              [side]: fitTo ? `${fitTo.inset}px` : SIDE_INSET,
+              transform: `translateY(-50%) scale(${fitTo?.scale ?? 1})`,
+              transformOrigin: side === "left" ? "left center" : "right center",
+            }
+      }
     >
       <div
         className="overflow-hidden rounded-xl border border-silver/20 bg-coal/70 backdrop-blur-[3px]"
@@ -665,14 +740,17 @@ function SlideBody({ slide }: { slide: Slide }) {
  * `stacked`: phones / smaller screens - the left card, then the right card,
  * one under the other below the intro text.
  */
-export default function SagaCards({ stacked }: { stacked?: boolean }) {
+export default function SagaCards({ stacked = false }: { stacked?: boolean }) {
   const data = useXPosts();
+  const sideFit = useSideFit();
   const preview = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("saga") === "preview";
   const hasPosts = !!data && Object.values(data.posts).some((l) => l && l.length);
   if (!hasPosts && !preview) return null; // nothing to show yet on the live site
   // each card only shows once it has real posts (so no "coming soon" boxes live)
   const showLeft = preview || !!(data?.posts.anakin?.length || data?.posts.fall?.length);
   const showRight = preview || !!data?.posts.vader?.length;
+  // only one layout shows: beside the title when there's room, else stacked
+  if (stacked === sideFit.fits) return null;
   if (stacked) {
     return (
       <div className="rwd-saga-stack relative mt-10 w-full flex-col items-center gap-6 px-4">
@@ -683,8 +761,8 @@ export default function SagaCards({ stacked }: { stacked?: boolean }) {
   }
   return (
     <>
-      {showLeft && <Carousel title="The Chosen One" slides={sagaSlides(data)} side="left" saga />}
-      {showRight && <Carousel title="Darth Vader" slides={vaderSlides(data)} side="right" />}
+      {showLeft && <Carousel title="The Chosen One" slides={sagaSlides(data)} side="left" saga fitTo={sideFit} />}
+      {showRight && <Carousel title="Darth Vader" slides={vaderSlides(data)} side="right" fitTo={sideFit} />}
     </>
   );
 }
