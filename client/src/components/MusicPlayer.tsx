@@ -68,6 +68,12 @@ function loadYT(): Promise<any> {
   });
 }
 
+// Original video widths for SM / MD / LG (px).
+const DIMS_ALL = { sm: 240, md: 340, lg: 460 } as const;
+// Smallest height the intro's logo + title + pill can shrink to (about half
+// their size) before a taller player would cover them.
+const INTRO_MIN_H = 165;
+
 export default function MusicPlayer() {
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
@@ -126,12 +132,16 @@ export default function MusicPlayer() {
     };
   }, []);
 
-  // Laptops (laptop-width and short screens): a taller MD/LG would cover the
-  // intro's logo and text, so there MD/LG only get WIDER and keep SM's height.
-  // Desktops (1700px+ wide windows, e.g. 1920/2560 monitors) always keep the
-  // original SM/MD/LG sizes, even if the window is on the short side.
-  const isLaptop = !isPhone && vp.w >= 1024 && vp.w < 1700 && vp.h < 800;
   const videoSize = chosenSize;
+  // MD/LG keep their ORIGINAL sizes unless that size would run over the
+  // intro's logo + title (the intro can only shrink them to half size). Only
+  // then (short screens like laptops) do MD/LG get WIDER instead of taller.
+  // Based on the real space, not the device, so desktops keep the originals.
+  // The main site never needs it (the player floats in a corner there).
+  const origVidH = Math.round(Math.min(DIMS_ALL[videoSize], vp.w - 32, Math.max(160, (vp.h - 170) / 0.62)) * 0.62);
+  const origCardH = 150 + (videoSize === "lg" ? 12 : videoSize === "md" ? 6 : 0) + origVidH; // controls + video
+  const roomForIntro = vp.h - vp.h * 0.03 - 40 - (origCardH + 28) - 40; // above the player, below the top ticker
+  const isLaptop = introMode && !isPhone && vp.w >= 1024 && videoSize !== "sm" && roomForIntro < INTRO_MIN_H;
   const sizeOptions = ["sm", "md", "lg"] as const;
   // How far in from each screen edge the intro's side cards reach (0 when
   // they aren't at the sides), so the wider laptop player stays between them.
@@ -611,7 +621,7 @@ export default function MusicPlayer() {
   // opening the video grows the card DOWNWARD, away from the logo above it.
   // User-resizable video (16:9). Capped to the viewport so it always fits,
   // and shorter when the window is small so the whole card stays on screen.
-  const DIMS = { sm: 240, md: 340, lg: 460 } as const;
+  const DIMS = DIMS_ALL;
   const vw = vp.w;
   // Width capped to the viewport, and also to the screen HEIGHT so the whole
   // card (controls ~150px + video) fits on short screens like sideways phones.
