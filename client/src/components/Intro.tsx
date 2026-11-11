@@ -263,16 +263,13 @@ export default function Intro() {
         REBEL WEB DESIGNS
       </h1>
 
-      <span data-circuit-avoid data-circuit-pill className={`intro-tagline mt-6 rounded-full border border-blood/60 bg-blood/10 px-5 py-2 font-display font-bold uppercase tracking-[0.3em] text-ember shadow-glow ${bigPlayer ? "text-base sm:text-lg" : "text-sm"}`}>
-        Coming Soon
+      {/* the pill under the title (wraps + tighter letter spacing on phones so
+          the longer line still fits) */}
+      <span data-circuit-avoid data-circuit-pill className={`intro-tagline mt-6 max-w-[92vw] rounded-full border border-blood/60 bg-blood/10 px-5 py-2 text-center font-display font-bold uppercase tracking-[0.15em] text-ember shadow-glow sm:tracking-[0.3em] ${bigPlayer ? "text-base sm:text-lg" : "text-sm"}`}>
+        Something iconic is being built
       </span>
 
-      {LOCKED ? (
-        <p data-circuit-avoid className={`mt-8 px-6 text-center text-ash ${bigPlayer ? "max-w-lg text-base sm:text-lg" : "max-w-md text-sm"}`}>
-          Something iconic is being built. Full-stack web development, UX/UI, and graphic
-          design services launching soon!
-        </p>
-      ) : (
+      {LOCKED ? null : (
         <>
           <p data-circuit-avoid className="mt-6 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.25em] text-silver">
             <span className="h-1.5 w-1.5 rounded-full bg-ember pulse-dot" />
