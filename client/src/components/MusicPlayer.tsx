@@ -616,7 +616,7 @@ export default function MusicPlayer() {
   const smW = Math.min(DIMS.sm, vw - 32, maxByHeight);
   // Laptops: MD/LG are wider but exactly as tall as SM, and never wider than
   // the gap between the intro's side cards (16px clear of each card).
-  const LAPTOP_DIMS = { sm: smW, md: 420, lg: 600 } as const;
+  const LAPTOP_DIMS = { sm: smW, md: 420, lg: 470 } as const;
   const laptopRoom = vw - 2 * cardsEdge - 32;
   const vidW = isLaptop
     ? Math.max(smW, Math.min(LAPTOP_DIMS[videoSize], laptopRoom))
