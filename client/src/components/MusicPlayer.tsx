@@ -104,7 +104,7 @@ export default function MusicPlayer() {
     mq.addEventListener("change", on);
     return () => mq.removeEventListener("change", on);
   }, []);
-  const [videoSize, setVideoSize] = useState<"sm" | "md" | "lg">("sm"); // user-resizable
+  const [chosenSize, setVideoSize] = useState<"sm" | "md" | "lg">("sm"); // user-resizable (see videoSize)
   // Read the intro flag synchronously so there's no race with the intro's event.
   const [introMode, setIntroMode] = useState<boolean>(() => !!(window as any).__rebelIntro);
   const [title, setTitle] = useState("Rebel Radio");
@@ -125,6 +125,13 @@ export default function MusicPlayer() {
       window.removeEventListener("orientationchange", on);
     };
   }, []);
+
+  // Laptops (wide but short screens): MD/LG would cover the intro's logo and
+  // text, so only SM is offered there. Bigger screens keep all three sizes;
+  // a size picked on a big screen comes back when the window is big again.
+  const isLaptop = !isPhone && vp.w >= 1024 && vp.h < 800;
+  const videoSize = isLaptop ? "sm" : chosenSize;
+  const sizeOptions = isLaptop ? (["sm"] as const) : (["sm", "md", "lg"] as const);
 
   // Report the card's real height (it changes with SM/MD/LG, video on/off,
   // minimize) so the intro can keep its text clear of the player.
@@ -763,7 +770,7 @@ export default function MusicPlayer() {
             <div className="flex items-center gap-2">
               {showVideo && (
                 <div className="flex items-center gap-1" aria-label="Video size">
-                  {(["sm", "md", "lg"] as const).map((s) => (
+                  {sizeOptions.map((s) => (
                     <button
                       key={s}
                       onClick={() => setVideoSize(s)}
