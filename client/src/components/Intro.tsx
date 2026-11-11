@@ -26,14 +26,6 @@ export function isSideways(w: number, h: number) {
 /** Phones + tablets (small or touch-only screens). Shared with MusicPlayer. */
 export const TOUCH_MQ = "(max-width: 639px), (hover: none) and (pointer: coarse)";
 
-/**
- * Phones + tablets held upright: on the intro the music player isn't pinned
- * over the page; it sits at the very bottom, after the cards, so visitors
- * scroll down to it. Shared with MusicPlayer.
- */
-export function playerInFlow(w: number, h: number) {
-  return h > w && window.matchMedia(TOUCH_MQ).matches;
-}
 
 // Flame separator: crimson fire with a white-hot core and a soft glow, with a
 // gentle flicker. Follows "Fuel your fire with Rebel Web Designs".
@@ -146,6 +138,13 @@ export default function Intro() {
   const [vw, setVw] = useState(() => window.innerWidth);
   const [contentH, setContentH] = useState(0);
   const contentRef = useRef<HTMLDivElement>(null);
+  // Is the music player at the end of the page (see MusicPlayer)?
+  const [playerFlow, setPlayerFlow] = useState<boolean>(() => !!(window as any).__rebelPlayerFlow);
+  useEffect(() => {
+    const on = (e: Event) => setPlayerFlow(!!(e as CustomEvent<boolean>).detail);
+    window.addEventListener("rebel-player-flow", on);
+    return () => window.removeEventListener("rebel-player-flow", on);
+  }, []);
 
   useEffect(() => {
     if (!show) return;
@@ -184,9 +183,10 @@ export default function Intro() {
   // Video window open at md/lg: the content gets scaled down to fit above the
   // player, so bump the small text up (and trim the logo) to keep it readable.
   // Based on the player's height, not the content's, so it can't flip-flop.
-  // Phones/tablets held upright: the player is part of the page (at the end),
-  // so nothing needs to be kept clear for it or shrunk around it.
-  const inFlow = playerInFlow(vw, vh);
+  // When the player goes at the end of the page (phones/tablets held upright,
+  // or a video size too big to fit in the center), nothing needs to be kept
+  // clear for it or shrunk around it. MusicPlayer decides and tells us.
+  const inFlow = playerFlow;
   const bigPlayer = !inFlow && playerH > 340;
   const reserved = sideways || inFlow ? 12 + TICKER_H : playerH + 8 + 20 + TICKER_H; // bottom ticker (+ player)
   const padRight = sideways ? playerW + 20 : 0; // space kept clear for the player

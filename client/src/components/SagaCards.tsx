@@ -456,9 +456,12 @@ function measureFit() {
   const vh = window.innerHeight;
   // distance from the screen edge (same as before on 1280px+, a bit less below)
   const inset = Math.min(95, Math.max(16, 25 + (vw - 1280) * 0.27));
-  // the widest thing in the middle column is the title
-  const title = document.querySelector<HTMLElement>("h1[data-circuit-avoid]")?.getBoundingClientRect();
-  const titleW = title?.width || Math.min(vw * 0.5, 720);
+  // the widest thing in the middle column is the title. Its real (unscaled)
+  // width: the intro shrinks the title to fit around the music player, and
+  // measuring the shrunk size would make the cards and player keep moving
+  // each other around.
+  const titleEl = document.querySelector<HTMLElement>("h1[data-circuit-avoid]");
+  const titleW = titleEl?.offsetWidth || Math.min(vw * 0.5, 720);
   const card = document.querySelector<HTMLElement>(".rwd-saga");
   const cardH = card?.offsetHeight || 500; // unscaled height
   const free = (vw - titleW) / 2 - TITLE_GAP - inset;
@@ -851,6 +854,15 @@ function SlideBody({ slide, active }: { slide: Slide; active: boolean }) {
 export default function SagaCards({ stacked = false }: { stacked?: boolean }) {
   const data = useXPosts();
   const sideFit = useSideFit();
+  // When the music player goes at the end of the page (its video too big to
+  // fit in the center), the cards stack under the title too, above the player.
+  const [playerFlow, setPlayerFlow] = useState<boolean>(() => !!(window as any).__rebelPlayerFlow);
+  useEffect(() => {
+    const on = (e: Event) => setPlayerFlow(!!(e as CustomEvent<boolean>).detail);
+    window.addEventListener("rebel-player-flow", on);
+    return () => window.removeEventListener("rebel-player-flow", on);
+  }, []);
+  const beside = sideFit.fits && !playerFlow;
   const preview = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("saga") === "preview";
   const hasPosts = !!data && Object.values(data.posts).some((l) => l && l.length);
   if (!hasPosts && !preview) return null; // nothing to show yet on the live site
@@ -858,7 +870,7 @@ export default function SagaCards({ stacked = false }: { stacked?: boolean }) {
   const showLeft = preview || !!(data?.posts.anakin?.length || data?.posts.fall?.length);
   const showRight = preview || !!data?.posts.vader?.length;
   // only one layout shows: beside the title when there's room, else stacked
-  if (stacked === sideFit.fits) return null;
+  if (stacked === beside) return null;
   if (stacked) {
     return (
       <div className="rwd-saga-stack relative mt-10 w-full flex-col items-center gap-6 px-4">

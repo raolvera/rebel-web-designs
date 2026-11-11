@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { isSideways, playerInFlow, TOUCH_MQ } from "./Intro";
+import { isSideways, TOUCH_MQ } from "./Intro";
 
 /**
  * Rebel Radio — one self-contained, draggable player card shown on every page
@@ -133,18 +133,8 @@ export default function MusicPlayer() {
   }, []);
 
   const videoSize = chosenSize;
-  // MD/LG keep their ORIGINAL sizes unless that size would run over the
-  // intro's logo + title (the intro can only shrink them to half size). Only
-  // then (short screens like laptops) do MD/LG get WIDER instead of taller.
-  // Based on the real space, not the device, so desktops keep the originals.
-  // The main site never needs it (the player floats in a corner there).
-  const origVidH = Math.round(Math.min(DIMS_ALL[videoSize], vp.w - 32, Math.max(160, (vp.h - 170) / 0.62)) * 0.62);
-  const origCardH = 150 + (videoSize === "lg" ? 12 : videoSize === "md" ? 6 : 0) + origVidH; // controls + video
-  const roomForIntro = vp.h - vp.h * 0.03 - 40 - (origCardH + 28) - 40; // above the player, below the top ticker
-  const isLaptop = introMode && !isPhone && vp.w >= 1024 && videoSize !== "sm" && roomForIntro < INTRO_MIN_H;
-  const sizeOptions = ["sm", "md", "lg"] as const;
   // How far in from each screen edge the intro's side cards reach (0 when
-  // they aren't at the sides), so the wider laptop player stays between them.
+  // they aren't at the sides), so the player stays in the center between them.
   const [cardsEdge, setCardsEdge] = useState<number>(() => (window as any).__rebelCardsEdge || 0);
   useEffect(() => {
     const on = (e: Event) => setCardsEdge((e as CustomEvent<{ edge: number }>).detail?.edge || 0);
@@ -152,11 +142,40 @@ export default function MusicPlayer() {
     return () => window.removeEventListener("rebel-cards-fit", on);
   }, []);
 
-  // Phones/tablets held upright on the intro: the player isn't pinned over the
-  // page; it sits in its spot at the very end ([data-player-slot]) and moves
-  // with the page as it scrolls, so visitors scroll down to it. It's kept
-  // in place this way (not moved in the page) so the music never restarts.
-  const inFlow = introMode && playerInFlow(vp.w, vp.h);
+  /* Where the player goes on the intro (the main site never needs this; the
+   * player floats in a corner there). Based on the real space, not the device:
+   *  1. ORIGINAL size, centered at the bottom between the side cards, when it
+   *     fits without covering the logo + title (the intro can only shrink them
+   *     to half size) or the cards. Desktops always get this.
+   *  2. Otherwise MD/LG get WIDER instead of taller (laptops), when that fits.
+   *  3. Otherwise the page stacks: the cards drop under the title and the
+   *     player goes at the very end of the page, below the cards (and always on
+   *     phones/tablets smaller than 1024px held upright). */
+  const smallTouch = isPhone && vp.w < 1024; // phones + tablets under 1024px
+  const capW = (w: number) => Math.min(w, vp.w - 32, Math.max(160, (vp.h - 170) / 0.62));
+  const smVidH0 = Math.round(capW(DIMS_ALL.sm) * 0.62);
+  const origVidH = Math.round(capW(DIMS_ALL[videoSize]) * 0.62);
+  const cardH = (size: "sm" | "md" | "lg", vidH: number) => 150 + (size === "lg" ? 12 : size === "md" ? 6 : 0) + vidH; // controls + video
+  // room left for the logo + title above a player pinned at the bottom
+  const roomAbove = (h: number) => vp.h - vp.h * 0.03 - 40 - (h + 28) - 40;
+  const centerRoom = vp.w - 2 * cardsEdge - 32; // between the side cards
+  const fitsOriginal = roomAbove(cardH(videoSize, origVidH)) >= INTRO_MIN_H && capW(DIMS_ALL[videoSize]) <= centerRoom;
+  const fitsWide = videoSize !== "sm" && roomAbove(cardH("sm", smVidH0)) >= INTRO_MIN_H;
+  const isLaptop = introMode && !smallTouch && !fitsOriginal && fitsWide;
+  const inFlow =
+    introMode &&
+    !isSideways(vp.w, vp.h) &&
+    (smallTouch ? vp.h > vp.w : !fitsOriginal && !fitsWide && showVideo);
+  // tell the intro + cards (they stack when the player goes to the end)
+  useEffect(() => {
+    (window as any).__rebelPlayerFlow = inFlow;
+    window.dispatchEvent(new CustomEvent("rebel-player-flow", { detail: inFlow }));
+  }, [inFlow]);
+  const sizeOptions = ["sm", "md", "lg"] as const;
+  // When the player goes at the end of the page (inFlow, above): it isn't
+  // pinned over the page; it sits in its spot there ([data-player-slot]) and
+  // moves with the page as it scrolls, so visitors scroll down to it. It's
+  // kept in place this way (not moved in the page) so the music never restarts.
   useLayoutEffect(() => {
     const el = cardRef.current;
     if (!inFlow || !el) return;
