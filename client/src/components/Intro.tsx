@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import RwdMark from "./RwdMark";
 import CircuitWeb from "./CircuitWeb";
 import SagaCards from "./SagaCards";
@@ -90,12 +91,15 @@ function SkullIcon() {
 
 // NASDAQ-style scrolling ribbon. `pos` pins it top or bottom; `rev` reverses
 // the scroll direction. Lives only in the locked intro so nothing leaks.
-function TickerBar({ pos, rev }: { pos: "top" | "bottom"; rev?: boolean }) {
+// Rendered straight into <body> (its own layer, above the intro page) so the
+// music player can pass BEHIND it: on phones/tablets the player scrolls with
+// the page and slides under the bottom ribbon instead of over it.
+function TickerBar({ pos, rev, leaving }: { pos: "top" | "bottom"; rev?: boolean; leaving?: boolean }) {
   const border = pos === "top" ? "border-b" : "border-t";
   const pin = pos === "top" ? "top-0" : "bottom-0";
   const track = rev ? "rwd-ticker-track-rev" : "rwd-ticker-track";
-  return (
-    <div className={`fixed ${pin} inset-x-0 z-[120] flex h-10 items-center overflow-hidden ${border} border-white/10 bg-coal/90 font-display text-xs font-semibold uppercase tracking-[0.2em] text-silver backdrop-blur-sm sm:text-sm`}>
+  return createPortal(
+    <div className={`fixed ${pin} inset-x-0 z-[120] flex h-10 items-center overflow-hidden ${border} border-white/10 bg-coal/90 font-display text-xs font-semibold uppercase tracking-[0.2em] text-silver backdrop-blur-sm transition-opacity duration-700 sm:text-sm ${leaving ? "pointer-events-none opacity-0" : "opacity-100"}`}>
       <div className={track}>
         {Array.from({ length: 2 }).map((_, half) => (
           <span key={half} className="flex shrink-0">
@@ -110,7 +114,8 @@ function TickerBar({ pos, rev }: { pos: "top" | "bottom"; rev?: boolean }) {
           </span>
         ))}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -236,8 +241,8 @@ export default function Intro() {
       {/* NASDAQ-style scrolling ribbons: tagline + RWD looping forever. Top
           scrolls one way, bottom the opposite; both live only in the locked
           intro so nothing from the full site leaks. */}
-      <TickerBar pos="top" />
-      <TickerBar pos="bottom" rev />
+      <TickerBar pos="top" leaving={leaving} />
+      <TickerBar pos="bottom" rev leaving={leaving} />
       {/* Star Wars edit cards (left: the saga, right: Vader), over the webs */}
       <SagaCards />
       {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
