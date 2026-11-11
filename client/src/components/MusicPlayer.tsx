@@ -120,6 +120,36 @@ export default function MusicPlayer() {
   const dragRef = useRef<{ dx: number; dy: number } | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
 
+  // Full screen video. The whole video window goes full screen (not just
+  // YouTube's frame) so the click-to-pause layer still works; Esc or the
+  // button exits. Hidden where the browser can't do it (e.g. iPhone Safari).
+  const videoWrapRef = useRef<HTMLDivElement>(null);
+  const doc = document as Document & { webkitFullscreenEnabled?: boolean; webkitFullscreenElement?: Element; webkitExitFullscreen?: () => void };
+  const canFullscreen = !!(doc.fullscreenEnabled || doc.webkitFullscreenEnabled);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  useEffect(() => {
+    const on = () => setIsFullscreen(!!(doc.fullscreenElement || doc.webkitFullscreenElement) && (doc.fullscreenElement || doc.webkitFullscreenElement) === videoWrapRef.current);
+    document.addEventListener("fullscreenchange", on);
+    document.addEventListener("webkitfullscreenchange", on);
+    return () => {
+      document.removeEventListener("fullscreenchange", on);
+      document.removeEventListener("webkitfullscreenchange", on);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  function toggleFullscreen() {
+    const el = videoWrapRef.current as (HTMLDivElement & { webkitRequestFullscreen?: () => void }) | null;
+    if (!el) return;
+    if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+      if (document.exitFullscreen) document.exitFullscreen().catch(() => {});
+      else doc.webkitExitFullscreen?.();
+    } else if (el.requestFullscreen) {
+      el.requestFullscreen().catch(() => {});
+    } else {
+      el.webkitRequestFullscreen?.();
+    }
+  }
+
   // Track the screen size so the player re-fits when a phone is rotated.
   const [vp, setVp] = useState(() => ({ w: window.innerWidth, h: window.innerHeight }));
   useEffect(() => {
@@ -132,7 +162,6 @@ export default function MusicPlayer() {
     };
   }, []);
 
-  const videoSize = chosenSize;
   // How far in from each screen edge the intro's side cards reach (0 when
   // they aren't at the sides), so the player stays in the center between them.
   const [cardsEdge, setCardsEdge] = useState<number>(() => (window as any).__rebelCardsEdge || 0);
@@ -154,12 +183,16 @@ export default function MusicPlayer() {
   const smallTouch = isPhone && vp.w < 1024; // phones + tablets under 1024px
   const capW = (w: number) => Math.min(w, vp.w - 32, Math.max(160, (vp.h - 170) / 0.62));
   const smVidH0 = Math.round(capW(DIMS_ALL.sm) * 0.62);
-  const origVidH = Math.round(capW(DIMS_ALL[videoSize]) * 0.62);
   const cardH = (size: "sm" | "md" | "lg", vidH: number) => 150 + (size === "lg" ? 12 : size === "md" ? 6 : 0) + vidH; // controls + video
   // room left for the logo + title above a player pinned at the bottom
   const roomAbove = (h: number) => vp.h - vp.h * 0.03 - 40 - (h + 28) - 40;
   const centerRoom = vp.w - 2 * cardsEdge - 32; // between the side cards
-  const fitsOriginal = roomAbove(cardH(videoSize, origVidH)) >= INTRO_MIN_H && capW(DIMS_ALL[videoSize]) <= centerRoom;
+  const fitsAt = (size: "sm" | "md" | "lg") =>
+    roomAbove(cardH(size, Math.round(capW(DIMS_ALL[size]) * 0.62))) >= INTRO_MIN_H && capW(DIMS_ALL[size]) <= centerRoom;
+  // Laptops: when LG's original size won't fit, LG is simply the same size as
+  // MD there (desktops with the room keep the original LG).
+  const videoSize = chosenSize === "lg" && introMode && !smallTouch && !fitsAt("lg") ? "md" : chosenSize;
+  const fitsOriginal = fitsAt(videoSize);
   const fitsWide = videoSize !== "sm" && roomAbove(cardH("sm", smVidH0)) >= INTRO_MIN_H;
   const isLaptop = introMode && !smallTouch && !fitsOriginal && fitsWide;
   const inFlow =
@@ -684,7 +717,7 @@ export default function MusicPlayer() {
   const smW = Math.min(DIMS.sm, vw - 32, maxByHeight);
   // Laptops: MD/LG are wider but exactly as tall as SM, and never wider than
   // the gap between the intro's side cards (16px clear of each card).
-  const LAPTOP_DIMS = { sm: smW, md: 420, lg: 470 } as const;
+  const LAPTOP_DIMS = { sm: smW, md: 420, lg: 420 } as const; // LG = MD on laptops
   const laptopRoom = vw - 2 * cardsEdge - 32;
   const vidW = isLaptop
     ? Math.max(smW, Math.min(LAPTOP_DIMS[videoSize], laptopRoom))
@@ -764,6 +797,7 @@ export default function MusicPlayer() {
           {/* Video window (attached) — collapses to 0 height in audio mode but
               the iframe is NEVER unmounted, so audio keeps playing. */}
           <div
+            ref={videoWrapRef}
             className="rwd-yt-host"
             style={{
               height: showVideo ? vidH : 0,
@@ -784,6 +818,19 @@ export default function MusicPlayer() {
               aria-hidden="true"
               className="absolute inset-0 z-10 cursor-pointer"
             />
+            {/* exit button while full screen (touch screens have no Esc key) */}
+            {isFullscreen && (
+              <button
+                onClick={toggleFullscreen}
+                aria-label="Exit full screen"
+                title="Exit full screen (Esc)"
+                className="absolute right-4 top-4 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-silver/30 bg-coal/80 text-silver transition hover:border-blood/60 hover:text-white"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" />
+                </svg>
+              </button>
+            )}
           </div>
 
           {/* Title */}
@@ -875,8 +922,9 @@ export default function MusicPlayer() {
                       key={s}
                       onClick={() => setVideoSize(s)}
                       aria-label={`Size ${s}`}
+                      aria-pressed={chosenSize === s}
                       className={`rounded px-1.5 py-0.5 ${btnSize} font-bold uppercase transition ${
-                        videoSize === s
+                        chosenSize === s
                           ? "bg-blood text-white"
                           : "border border-silver/30 text-ash hover:text-silver"
                       }`}
@@ -885,6 +933,18 @@ export default function MusicPlayer() {
                     </button>
                   ))}
                 </div>
+              )}
+              {showVideo && canFullscreen && (
+                <button
+                  onClick={toggleFullscreen}
+                  aria-label="Full screen video"
+                  title="Full screen"
+                  className="flex h-6 w-6 items-center justify-center rounded border border-silver/30 text-ash transition hover:text-silver"
+                >
+                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" />
+                  </svg>
+                </button>
               )}
               <button
                 role="switch"
