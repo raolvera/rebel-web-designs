@@ -345,7 +345,7 @@ body {
   display: inline-flex;
   white-space: nowrap;
   width: max-content;
-  animation: rwdTicker 40s linear infinite;
+  animation: rwdTicker 50s linear infinite;
 }
 @keyframes rwdTicker {
   from { transform: translateX(0); }
@@ -359,7 +359,7 @@ body {
   display: inline-flex;
   white-space: nowrap;
   width: max-content;
-  animation: rwdTickerRev 40s linear infinite;
+  animation: rwdTickerRev 50s linear infinite;
 }
 @keyframes rwdTickerRev {
   from { transform: translateX(-50%); }

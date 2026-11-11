@@ -99,9 +99,9 @@ export default function MusicPlayer() {
 
   const [playing, setPlaying] = useState(false);
   const [showVideo, setShowVideo] = useState(false);
-  // Phones: the player is locked in place at the bottom (no dragging). The
-  // Audio / Video switch still works.
-  const PHONE_MQ = "(max-width: 639px)";
+  // Phones AND tablets (any touch-only screen): the player is locked in place
+  // at the bottom center (no dragging). The Audio / Video switch still works.
+  const PHONE_MQ = "(max-width: 639px), (hover: none) and (pointer: coarse)";
   const [isPhone, setIsPhone] = useState(() => window.matchMedia(PHONE_MQ).matches);
   useEffect(() => {
     const mq = window.matchMedia(PHONE_MQ);
@@ -585,7 +585,7 @@ export default function MusicPlayer() {
 
   // --- drag (pointer capture so the iframe can't swallow the drop) ---
   function onDragStart(e: React.PointerEvent) {
-    if (introMode || isPhone) return; // no dragging during the intro or on phones
+    if (introMode || isPhone) return; // no dragging during the intro or on phones/tablets
     // Let buttons in the header (minimize, play) get their clicks; only drag
     // when grabbing the bar itself.
     if ((e.target as HTMLElement).closest("button")) return;
@@ -662,7 +662,7 @@ export default function MusicPlayer() {
       ? { right: 8, bottom: 48, zIndex: 130 } // sideways phone: above the bottom ticker
       : { left: "50%", bottom: 48, transform: "translateX(-50%)", zIndex: 130 } // centered, above the bottom ticker
     : isPhone
-    ? { left: "50%", bottom: 8, transform: "translateX(-50%)", zIndex: 50 } // phones: locked at the bottom
+    ? { left: "50%", bottom: 8, transform: "translateX(-50%)", zIndex: 50 } // phones + tablets: locked at the bottom
     : pos
     ? { left: pos.x, top: pos.y, zIndex: 50 }
     : { left: 24, top: defaultTop, zIndex: 50 };
