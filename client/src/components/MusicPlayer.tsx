@@ -126,9 +126,11 @@ export default function MusicPlayer() {
     };
   }, []);
 
-  // Laptops (wide but short screens): a taller MD/LG would cover the intro's
-  // logo and text, so there MD/LG only get WIDER and keep SM's height.
-  const isLaptop = !isPhone && vp.w >= 1024 && vp.h < 800;
+  // Laptops (laptop-width and short screens): a taller MD/LG would cover the
+  // intro's logo and text, so there MD/LG only get WIDER and keep SM's height.
+  // Desktops (1700px+ wide windows, e.g. 1920/2560 monitors) always keep the
+  // original SM/MD/LG sizes, even if the window is on the short side.
+  const isLaptop = !isPhone && vp.w >= 1024 && vp.w < 1700 && vp.h < 800;
   const videoSize = chosenSize;
   const sizeOptions = ["sm", "md", "lg"] as const;
   // How far in from each screen edge the intro's side cards reach (0 when
