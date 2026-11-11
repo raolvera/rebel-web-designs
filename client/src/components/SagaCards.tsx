@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 /**
  * Star Wars edit cards on the intro, floating OVER the webs and circuits
@@ -615,7 +616,7 @@ function Carousel({ title, slides, side, saga, fitTo }: { title: string; slides:
                   pointerEvents: active ? "auto" : "none",
                 }}
               >
-                <SlideBody slide={s} />
+                <SlideBody slide={s} active={active} />
               </div>
             );
           })}
@@ -667,13 +668,115 @@ function SagaDot({ on, color }: { on: boolean; color: string }) {
   );
 }
 
-function SlideBody({ slide }: { slide: Slide }) {
+/* ---------------- Photo pop-out ----------------
+ * Desktop/laptop (mouse): hovering a card's photo shows the whole picture big
+ * in the middle of the screen. Touch screens (phones/tablets): tapping the
+ * photo opens it full screen; tap anywhere (or Esc) to close. Clicking or
+ * pressing Enter on it opens the full-screen view on any device. */
+type Zoom = { src: string; alt: string; credit: string; mode: "hover" | "open" } | null;
+let zoom: Zoom = null;
+const zoomListeners = new Set<(z: Zoom) => void>();
+function setZoom(z: Zoom) {
+  zoom = z;
+  zoomListeners.forEach((l) => l(z));
+}
+const canHover = () => typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+function PhotoZoom() {
+  const [z, setZ] = useState<Zoom>(zoom);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const backTo = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    zoomListeners.add(setZ);
+    return () => {
+      zoomListeners.delete(setZ);
+    };
+  }, []);
+  const open = z?.mode === "open";
+  useEffect(() => {
+    if (!open) return;
+    backTo.current = document.activeElement as HTMLElement | null;
+    closeRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setZoom(null);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      backTo.current?.focus?.(); // back to the photo it was opened from
+    };
+  }, [open]);
+  if (!z) return null;
+
+  if (!open) {
+    // hover preview: centered, between the side cards, never steals the mouse
+    const edge = fit.fits ? fit.inset + CARD_W * fit.scale : 0;
+    return createPortal(
+      <div className="pointer-events-none fixed inset-0 z-[200] flex items-center justify-center" aria-hidden="true">
+        <img
+          src={z.src}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="rwd-zoom-in rounded-xl border border-silver/20 object-contain shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
+          style={{ maxHeight: "calc(100vh - 120px)", maxWidth: `calc(100vw - ${Math.round(edge * 2 + 48)}px)` }}
+        />
+      </div>,
+      document.body,
+    );
+  }
+
+  // full-screen view (touch tap, click, or keyboard)
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={z.alt}
+      onClick={() => setZoom(null)}
+      className="rwd-zoom-fade fixed inset-0 z-[200] flex flex-col items-center justify-center gap-3 bg-black/85 p-4 backdrop-blur-sm"
+    >
+      <button
+        ref={closeRef}
+        onClick={() => setZoom(null)}
+        aria-label="Close picture"
+        className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-silver/30 bg-ink/80 text-xl text-silver transition hover:text-white"
+      >
+        ×
+      </button>
+      <img
+        src={z.src}
+        alt={z.alt}
+        referrerPolicy="no-referrer"
+        className="rwd-zoom-in max-h-[85vh] max-w-[92vw] rounded-xl object-contain shadow-[0_20px_60px_rgba(0,0,0,0.8)]"
+      />
+      {z.credit && <span className="text-xs text-ash">{z.credit}</span>}
+    </div>,
+    document.body,
+  );
+}
+
+function SlideBody({ slide, active }: { slide: Slide; active: boolean }) {
   const st = STAGES[slide.stage];
   const p = slide.post;
+  const alt = p ? (p.username ? `${st.label} art by @${p.username}` : `${st.label} art`) : "";
+  const zoomInfo = (mode: "hover" | "open"): Zoom =>
+    p?.image ? { src: p.image, alt, credit: p.username ? `@${p.username}` : "", mode } : null;
+  const canZoom = !!p?.image;
   return (
     <>
-      {/* media */}
-      <div className="relative h-[250px] overflow-hidden rounded-lg border border-white/10 bg-ink">
+      {/* media (hover = big preview on desktop/laptop, tap/click = full screen) */}
+      <div
+        className={`relative h-[250px] overflow-hidden rounded-lg border border-white/10 bg-ink ${canZoom ? "cursor-zoom-in" : ""}`}
+        role={canZoom ? "button" : undefined}
+        tabIndex={canZoom && active ? 0 : -1}
+        aria-label={canZoom ? `View the full picture: ${alt}` : undefined}
+        onMouseEnter={() => canZoom && canHover() && setZoom(zoomInfo("hover"))}
+        onMouseLeave={() => zoom?.mode === "hover" && setZoom(null)}
+        onClick={() => canZoom && setZoom(zoomInfo("open"))}
+        onKeyDown={(e) => {
+          if (canZoom && (e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            setZoom(zoomInfo("open"));
+          }
+        }}
+      >
         {p?.image ? (
           <>
             {/* the whole photo, never cropped; a soft blurred copy fills the spare space */}
@@ -761,6 +864,7 @@ export default function SagaCards({ stacked = false }: { stacked?: boolean }) {
       <div className="rwd-saga-stack relative mt-10 w-full flex-col items-center gap-6 px-4">
         {showLeft && <Carousel title="The Chosen One" slides={sagaSlides(data)} side="stack" saga />}
         {showRight && <Carousel title="Darth Vader" slides={vaderSlides(data)} side="stack" />}
+        <PhotoZoom />
       </div>
     );
   }
@@ -768,6 +872,7 @@ export default function SagaCards({ stacked = false }: { stacked?: boolean }) {
     <>
       {showLeft && <Carousel title="The Chosen One" slides={sagaSlides(data)} side="left" saga fitTo={sideFit} />}
       {showRight && <Carousel title="Darth Vader" slides={vaderSlides(data)} side="right" fitTo={sideFit} />}
+      <PhotoZoom />
     </>
   );
 }

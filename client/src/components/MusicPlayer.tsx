@@ -432,9 +432,10 @@ export default function MusicPlayer() {
           ...(INTRO_VIDEO_ID ? { videoId: INTRO_VIDEO_ID } : {}),
           playerVars: {
             autoplay: 0,
-            controls: 1,
+            controls: 0, // no YouTube control bar; Rebel Radio has its own controls
             modestbranding: 1,
             rel: 0,
+            iv_load_policy: 3, // no video annotations
             playsinline: 1,
             ...(INTRO_VIDEO_ID ? {} : { list: PLAYLIST_ID, listType: "playlist" }),
           },
@@ -698,9 +699,19 @@ export default function MusicPlayer() {
               transition: "height 0.2s ease",
               overflow: "hidden",
               background: "#000",
+              position: "relative",
             }}
           >
             <div ref={hostRef} />
+            {/* Clear layer over the video: YouTube's own buttons/title bar don't
+                pop up on hover, and a click plays/pauses (Rebel Radio's own
+                controls below still do everything). */}
+            <div
+              onClick={() => (playing ? pausePlay() : startPlay())}
+              title={playing ? "Pause" : "Play"}
+              aria-hidden="true"
+              className="absolute inset-0 z-10 cursor-pointer"
+            />
           </div>
 
           {/* Title */}
