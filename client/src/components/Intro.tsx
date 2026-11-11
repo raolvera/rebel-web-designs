@@ -22,6 +22,18 @@ export function isSideways(w: number, h: number) {
   return w > h && h < 520;
 }
 
+/** Phones + tablets (small or touch-only screens). Shared with MusicPlayer. */
+export const TOUCH_MQ = "(max-width: 639px), (hover: none) and (pointer: coarse)";
+
+/**
+ * Phones + tablets held upright: on the intro the music player isn't pinned
+ * over the page; it sits at the very bottom, after the cards, so visitors
+ * scroll down to it. Shared with MusicPlayer.
+ */
+export function playerInFlow(w: number, h: number) {
+  return h > w && window.matchMedia(TOUCH_MQ).matches;
+}
+
 // Flame separator: crimson fire with a white-hot core and a soft glow, with a
 // gentle flicker. Follows "Fuel your fire with Rebel Web Designs".
 function FlameIcon() {
@@ -167,8 +179,11 @@ export default function Intro() {
   // Video window open at md/lg: the content gets scaled down to fit above the
   // player, so bump the small text up (and trim the logo) to keep it readable.
   // Based on the player's height, not the content's, so it can't flip-flop.
-  const bigPlayer = playerH > 340;
-  const reserved = sideways ? 12 + TICKER_H : playerH + 8 + 20 + TICKER_H; // bottom ticker + player
+  // Phones/tablets held upright: the player is part of the page (at the end),
+  // so nothing needs to be kept clear for it or shrunk around it.
+  const inFlow = playerInFlow(vw, vh);
+  const bigPlayer = !inFlow && playerH > 340;
+  const reserved = sideways || inFlow ? 12 + TICKER_H : playerH + 8 + 20 + TICKER_H; // bottom ticker (+ player)
   const padRight = sideways ? playerW + 20 : 0; // space kept clear for the player
   const roomyTop = vh * (sideways ? 0.04 : 0.08);
   const tightTop = vh * 0.03;
@@ -293,6 +308,11 @@ export default function Intro() {
 
       {/* phones / smaller screens: the Star Wars cards stacked, left then right */}
       <SagaCards stacked />
+
+      {/* Phones/tablets held upright: the music player's spot at the very end of
+          the page. The player itself always stays mounted (so the music never
+          stops) and lines itself up with this spot as the page scrolls. */}
+      {inFlow && <div data-player-slot className="mt-8 w-full shrink-0" style={{ height: playerH || 160 }} aria-hidden="true" />}
     </div>
   );
 }

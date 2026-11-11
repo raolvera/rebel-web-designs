@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { isSideways } from "./Intro";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { isSideways, playerInFlow, TOUCH_MQ } from "./Intro";
 
 /**
  * Rebel Radio — one self-contained, draggable player card shown on every page
@@ -101,7 +101,7 @@ export default function MusicPlayer() {
   const [showVideo, setShowVideo] = useState(false);
   // Phones AND tablets (any touch-only screen): the player is locked in place
   // at the bottom center (no dragging). The Audio / Video switch still works.
-  const PHONE_MQ = "(max-width: 639px), (hover: none) and (pointer: coarse)";
+  const PHONE_MQ = TOUCH_MQ;
   const [isPhone, setIsPhone] = useState(() => window.matchMedia(PHONE_MQ).matches);
   useEffect(() => {
     const mq = window.matchMedia(PHONE_MQ);
@@ -151,6 +151,42 @@ export default function MusicPlayer() {
     window.addEventListener("rebel-cards-fit", on);
     return () => window.removeEventListener("rebel-cards-fit", on);
   }, []);
+
+  // Phones/tablets held upright on the intro: the player isn't pinned over the
+  // page; it sits in its spot at the very end ([data-player-slot]) and moves
+  // with the page as it scrolls, so visitors scroll down to it. It's kept
+  // in place this way (not moved in the page) so the music never restarts.
+  const inFlow = introMode && playerInFlow(vp.w, vp.h);
+  useLayoutEffect(() => {
+    const el = cardRef.current;
+    if (!inFlow || !el) return;
+    let raf = 0;
+    const sync = () => {
+      const slot = document.querySelector<HTMLElement>("[data-player-slot]");
+      if (!slot) return;
+      el.style.top = `${slot.getBoundingClientRect().top}px`;
+      el.style.visibility = "visible";
+    };
+    const soon = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(sync);
+    };
+    el.style.visibility = "hidden"; // until it's lined up
+    sync();
+    // the page scrolls inside the intro, so listen in the capture phase
+    window.addEventListener("scroll", sync, { capture: true, passive: true });
+    window.addEventListener("resize", soon);
+    // content above can change height (cards and photos load in)
+    const iv = window.setInterval(sync, 400);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", sync, { capture: true } as EventListenerOptions);
+      window.removeEventListener("resize", soon);
+      window.clearInterval(iv);
+      el.style.top = "";
+      el.style.visibility = "";
+    };
+  }, [inFlow]);
 
   // Report the card's real height (it changes with SM/MD/LG, video on/off,
   // minimize) so the intro can keep its text clear of the player.
@@ -657,7 +693,12 @@ export default function MusicPlayer() {
   // card never runs off the top edge on big (lg) video sizes.
   const defaultTop = Math.max(16, vhNow - estCardH - 24);
 
-  const cardStyle: React.CSSProperties = introMode
+  const cardStyle: React.CSSProperties = inFlow
+    ? // phones/tablets upright on the intro: at the end of the page, lined up
+      // with its spot there (top is set by the scroll sync above); it passes
+      // under the bottom ticker as the page scrolls
+      { left: "50%", transform: "translateX(-50%)", zIndex: 115 }
+    : introMode
     ? isSideways(vp.w, vp.h)
       ? { right: 8, bottom: 48, zIndex: 130 } // sideways phone: above the bottom ticker
       : { left: "50%", bottom: 48, transform: "translateX(-50%)", zIndex: 130 } // centered, above the bottom ticker
