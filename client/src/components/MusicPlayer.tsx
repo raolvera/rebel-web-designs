@@ -527,6 +527,9 @@ export default function MusicPlayer() {
         // the list this way is the documented playlist-embed path and avoids
         // needing an empty/placeholder video before cueing.
         playerRef.current = new YT.Player(hostRef.current, {
+          // YouTube's privacy-enhanced mode: no YouTube cookies are stored
+          // for visitors until they actually play something.
+          host: "https://www.youtube-nocookie.com",
           width: "100%",
           height: "100%",
           ...(INTRO_VIDEO_ID ? { videoId: INTRO_VIDEO_ID } : {}),
