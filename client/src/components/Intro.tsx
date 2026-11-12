@@ -243,6 +243,14 @@ export default function Intro() {
           intro so nothing from the full site leaks. */}
       <TickerBar pos="top" leaving={leaving} />
       <TickerBar pos="bottom" rev leaving={leaving} />
+      {/* privacy page link, small, just above the bottom ribbon (desktop /
+          laptop; phones and tablets get it at the end of the page instead) */}
+      <a
+        href="/privacy.html"
+        className="fixed bottom-12 left-3 z-[121] hidden rounded sm:block [@media(hover:none)_and_(pointer:coarse)]:hidden px-1.5 py-0.5 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-ash/80 transition hover:text-silver focus-visible:outline focus-visible:outline-2 focus-visible:outline-blood"
+      >
+        Privacy
+      </a>
       {/* Star Wars edit cards (left: the saga, right: Vader), over the webs */}
       <SagaCards />
       {/* circuit traces + circuit spiderwebs with red beams (behind everything) */}
@@ -318,6 +326,14 @@ export default function Intro() {
           the page. The player itself always stays mounted (so the music never
           stops) and lines itself up with this spot as the page scrolls. */}
       {inFlow && <div data-player-slot className="mt-8 w-full shrink-0" style={{ height: playerH || 160 }} aria-hidden="true" />}
+
+      {/* phones / tablets: the privacy link at the very end of the page */}
+      <a
+        href="/privacy.html"
+        className="relative mt-6 shrink-0 rounded px-2 py-1 font-display text-[11px] font-semibold uppercase tracking-[0.2em] text-ash/80 transition hover:text-silver focus-visible:outline focus-visible:outline-2 focus-visible:outline-blood sm:hidden [@media(hover:none)_and_(pointer:coarse)]:block"
+      >
+        Privacy
+      </a>
     </div>
   );
 }

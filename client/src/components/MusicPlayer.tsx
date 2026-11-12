@@ -78,6 +78,7 @@ export default function MusicPlayer() {
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<any>(null);
   const readyRef = useRef(false);
+  const ytInitRef = useRef(false); // YouTube loading/loaded (see ensurePlayer)
   const unlockedRef = useRef(false);
   const wantPlayRef = useRef(false);
   const shuffleRef = useRef(false); // read inside YouTube callbacks
@@ -262,6 +263,7 @@ export default function MusicPlayer() {
     // Pressing Play is a user gesture → play with SOUND.
     wantPlayRef.current = true;
     unlockedRef.current = true;
+    ensurePlayer(); // first Play: load YouTube (it starts when ready)
     const p = playerRef.current;
     if (!readyRef.current || !p) return;
     p.unMute?.();
@@ -470,7 +472,7 @@ export default function MusicPlayer() {
 
   function next() {
     const p = playerRef.current;
-    if (!p || !readyRef.current) return;
+    if (!p || !readyRef.current) return startPlay(); // not loaded yet: just start the radio
     wantPlayRef.current = true;
     unlockedRef.current = true;
     p.unMute?.();
@@ -492,7 +494,7 @@ export default function MusicPlayer() {
 
   function prev() {
     const p = playerRef.current;
-    if (!p || !readyRef.current) return;
+    if (!p || !readyRef.current) return ensurePlayer();
     if (unlockedRef.current) p.unMute?.();
     // More than ~3s into the song: restart it. Otherwise go back to the song
     // you actually heard before this one (works with shuffle too).
@@ -516,11 +518,15 @@ export default function MusicPlayer() {
     else if (unlockedRef.current) p?.unMute?.();
   }
 
-  useEffect(() => {
-    let cancelled = false;
+  // YouTube is loaded only once the visitor reaches for the radio (points at
+  // or taps the player, presses Play, or turns the video on). YouTube's script
+  // sets its cookies, so visitors who never use the radio get none.
+  function ensurePlayer() {
+    if (ytInitRef.current) return;
+    ytInitRef.current = true;
     loadYT()
       .then((YT) => {
-        if (cancelled || !hostRef.current || playerRef.current) return;
+        if (!hostRef.current || playerRef.current) return;
         // On a special day load that single intro video; on any other day load
         // the Rebel Radio playlist directly via playerVars (it's cued, since
         // autoplay is 0, so the visitor's first Play starts the radio). Loading
@@ -551,6 +557,13 @@ export default function MusicPlayer() {
               if (!INTRO_VIDEO_ID) {
                 modeRef.current = "rebel";
                 resetQueue();
+              }
+              // Play was pressed while YouTube was still loading: start now.
+              if (wantPlayRef.current) {
+                const p = playerRef.current;
+                p?.unMute?.();
+                p?.setVolume?.(volRef.current);
+                p?.playVideo?.();
               }
             },
             onStateChange: (e: any) => {
@@ -627,8 +640,18 @@ export default function MusicPlayer() {
           },
         });
       })
-      .catch(() => { /* API blocked */ });
+      .catch(() => {
+        ytInitRef.current = false; // blocked or offline: try again next time
+      });
+  }
 
+  // turning the video on loads YouTube too (it shows the video window)
+  useEffect(() => {
+    if (showVideo) ensurePlayer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showVideo]);
+
+  useEffect(() => {
     const onPlay = () => startPlay();
     const onPause = () => pausePlay();
     const onToggle = () => {
@@ -660,7 +683,6 @@ export default function MusicPlayer() {
     window.addEventListener("rebel-toggle-video", onVideo as EventListener);
 
     return () => {
-      cancelled = true;
       clearTimers();
       window.removeEventListener("rebel-play-music", onPlay as EventListener);
       window.removeEventListener("rebel-pause-music", onPause as EventListener);
@@ -764,7 +786,16 @@ export default function MusicPlayer() {
     : { left: 24, top: defaultTop, zIndex: 50 };
 
   return (
-    <div ref={cardRef} data-circuit-avoid="player" className="fixed" style={cardStyle}>
+    <div
+      ref={cardRef}
+      data-circuit-avoid="player"
+      className="fixed"
+      style={cardStyle}
+      // reaching for the radio starts loading YouTube, so Play is quick
+      onPointerEnter={ensurePlayer}
+      onPointerDown={ensurePlayer}
+      onFocus={ensurePlayer}
+    >
         {/* The card is ALWAYS mounted, so the music never stops. Its smallest
             size is the standard audio-only player; minimize just closes the video. */}
         <div
