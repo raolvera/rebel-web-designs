@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { isSideways, TOUCH_MQ } from "./Intro";
 
 /**
- * the Media Player — one self-contained, draggable player card shown on every page
+ * Media Player — one self-contained, draggable player card shown on every page
  * (mounted once in Layout; never unmounts so audio survives navigation).
  *
  * The YouTube iframe and the controls live together in ONE card: a small video
@@ -277,7 +277,7 @@ export default function MusicPlayer() {
   }
 
   // ---------------- Playback queue ----------------
-  // "intro" = the single intro song, "rebel" = the the Media Player playlist,
+  // "intro" = the single intro song, "rebel" = the Media Player playlist,
   // "mix"   = endless YouTube radio of similar songs once the playlist is done.
   function hasPlaylist() {
     const p = playerRef.current;
@@ -359,7 +359,7 @@ export default function MusicPlayer() {
     mixWatchRef.current = null;
   }
 
-  // Load the the Media Player playlist (from the top; shuffle picks the first song).
+  // Load the Media Player playlist (from the top; shuffle picks the first song).
   function loadRebel(skipIntro = false) {
     clearTimers();
     modeRef.current = "rebel";
@@ -388,7 +388,7 @@ export default function MusicPlayer() {
     playerRef.current?.loadPlaylist?.({ list: `RD${seed}`, listType: "playlist", index: 0 });
     if (unlockedRef.current) playerRef.current?.unMute?.();
     // Some mixes aren't allowed in embeds. If it doesn't start, keep the music
-    // going with the the Media Player playlist on shuffle instead.
+    // going with the Media Player playlist on shuffle instead.
     mixWatchRef.current = window.setTimeout(() => {
       const state = playerRef.current?.getPlayerState?.();
       if (modeRef.current === "mix" && (!hasPlaylist() || state === -1 || state === 0 || state === 5)) {
@@ -435,7 +435,7 @@ export default function MusicPlayer() {
     }
     if (isLastInList()) {
       // Playlist done: keep the radio going with a Mix of similar songs. If
-      // mixes can't embed here (mobile), just loop the the Media Player playlist.
+      // mixes can't embed here (mobile), just loop the Media Player playlist.
       if (mixDisabledRef.current) loadRebel(false);
       else startMix(currentId());
       return;
@@ -528,7 +528,7 @@ export default function MusicPlayer() {
       .then((YT) => {
         if (!hostRef.current || playerRef.current) return;
         // On a special day load that single intro video; on any other day load
-        // the the Media Player playlist directly via playerVars (it's cued, since
+        // the Media Player playlist directly via playerVars (it's cued, since
         // autoplay is 0, so the visitor's first Play starts the radio). Loading
         // the list this way is the documented playlist-embed path and avoids
         // needing an empty/placeholder video before cueing.
@@ -541,7 +541,7 @@ export default function MusicPlayer() {
           ...(INTRO_VIDEO_ID ? { videoId: INTRO_VIDEO_ID } : {}),
           playerVars: {
             autoplay: 0,
-            controls: 0, // no YouTube control bar; the Media Player has its own controls
+            controls: 0, // no YouTube control bar; the player has its own controls
             modestbranding: 1,
             rel: 0,
             iv_load_policy: 3, // no video annotations
