@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { isSideways, TOUCH_MQ } from "./Intro";
 
 /**
- * Rebel Radio — one self-contained, draggable player card shown on every page
+ * the Media Player — one self-contained, draggable player card shown on every page
  * (mounted once in Layout; never unmounts so audio survives navigation).
  *
  * The YouTube iframe and the controls live together in ONE card: a small video
@@ -16,8 +16,8 @@ import { isSideways, TOUCH_MQ } from "./Intro";
 const PLAYLIST_ID = "PLc1TGI0jv1YA";
 
 // One-day special opening songs, keyed by the visitor's local date (YYYY-MM-DD).
-// On a special day that song opens Rebel Radio (Thriller repeats all day). On
-// any other day there is NO fixed intro — Rebel Radio starts straight from the
+// On a special day that song opens the Media Player (Thriller repeats all day). On
+// any other day there is NO fixed intro — the Media Player starts straight from the
 // playlist. Old entries stay harmlessly (they only fire on their own day).
 const SPECIAL_INTROS: Record<string, string> = {
   "2026-10-31": "sOnqjkJTMaA", // Halloween: Michael Jackson - Thriller
@@ -31,7 +31,7 @@ function todayKey() {
 }
 
 // The opening song for this visit, IF today is a special day (otherwise empty,
-// meaning Rebel Radio starts with the playlist instead of a single intro song).
+// meaning the Media Player starts with the playlist instead of a single intro song).
 const INTRO_VIDEO_ID = SPECIAL_INTROS[todayKey()] || "";
 // On a special day, that song plays on repeat all day (no playlist, no mix).
 const REPEAT_ALL_DAY = !!SPECIAL_INTROS[todayKey()];
@@ -114,7 +114,7 @@ export default function MusicPlayer() {
   const [chosenSize, setVideoSize] = useState<"sm" | "md" | "lg">("sm"); // user-resizable (see videoSize)
   // Read the intro flag synchronously so there's no race with the intro's event.
   const [introMode, setIntroMode] = useState<boolean>(() => !!(window as any).__rebelIntro);
-  const [title, setTitle] = useState("Rebel Radio");
+  const [title, setTitle] = useState("Media Player");
   const [volume, setVol] = useState(15); // soft default so it doesn't blast visitors
   const volRef = useRef(15); // same value, readable inside YouTube callbacks
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -277,7 +277,7 @@ export default function MusicPlayer() {
   }
 
   // ---------------- Playback queue ----------------
-  // "intro" = the single intro song, "rebel" = the Rebel Radio playlist,
+  // "intro" = the single intro song, "rebel" = the the Media Player playlist,
   // "mix"   = endless YouTube radio of similar songs once the playlist is done.
   function hasPlaylist() {
     const p = playerRef.current;
@@ -359,7 +359,7 @@ export default function MusicPlayer() {
     mixWatchRef.current = null;
   }
 
-  // Load the Rebel Radio playlist (from the top; shuffle picks the first song).
+  // Load the the Media Player playlist (from the top; shuffle picks the first song).
   function loadRebel(skipIntro = false) {
     clearTimers();
     modeRef.current = "rebel";
@@ -388,7 +388,7 @@ export default function MusicPlayer() {
     playerRef.current?.loadPlaylist?.({ list: `RD${seed}`, listType: "playlist", index: 0 });
     if (unlockedRef.current) playerRef.current?.unMute?.();
     // Some mixes aren't allowed in embeds. If it doesn't start, keep the music
-    // going with the Rebel Radio playlist on shuffle instead.
+    // going with the the Media Player playlist on shuffle instead.
     mixWatchRef.current = window.setTimeout(() => {
       const state = playerRef.current?.getPlayerState?.();
       if (modeRef.current === "mix" && (!hasPlaylist() || state === -1 || state === 0 || state === 5)) {
@@ -435,7 +435,7 @@ export default function MusicPlayer() {
     }
     if (isLastInList()) {
       // Playlist done: keep the radio going with a Mix of similar songs. If
-      // mixes can't embed here (mobile), just loop the Rebel Radio playlist.
+      // mixes can't embed here (mobile), just loop the the Media Player playlist.
       if (mixDisabledRef.current) loadRebel(false);
       else startMix(currentId());
       return;
@@ -528,7 +528,7 @@ export default function MusicPlayer() {
       .then((YT) => {
         if (!hostRef.current || playerRef.current) return;
         // On a special day load that single intro video; on any other day load
-        // the Rebel Radio playlist directly via playerVars (it's cued, since
+        // the the Media Player playlist directly via playerVars (it's cued, since
         // autoplay is 0, so the visitor's first Play starts the radio). Loading
         // the list this way is the documented playlist-embed path and avoids
         // needing an empty/placeholder video before cueing.
@@ -541,7 +541,7 @@ export default function MusicPlayer() {
           ...(INTRO_VIDEO_ID ? { videoId: INTRO_VIDEO_ID } : {}),
           playerVars: {
             autoplay: 0,
-            controls: 0, // no YouTube control bar; Rebel Radio has its own controls
+            controls: 0, // no YouTube control bar; the Media Player has its own controls
             modestbranding: 1,
             rel: 0,
             iv_load_policy: 3, // no video annotations
@@ -813,7 +813,7 @@ export default function MusicPlayer() {
           >
             <span className="flex items-center gap-2 font-display text-xs font-semibold uppercase tracking-wider text-silver">
               {activeLight}
-              Rebel Radio
+              Media Player
             </span>
             {/* Minimize = close the video and go back to the standard player.
                 It never shrinks smaller than that and never stops the music. */}
@@ -844,7 +844,7 @@ export default function MusicPlayer() {
           >
             <div ref={hostRef} />
             {/* Clear layer over the video: YouTube's own buttons/title bar don't
-                pop up on hover, and a click plays/pauses (Rebel Radio's own
+                pop up on hover, and a click plays/pauses (the Media Player's own
                 controls below still do everything). */}
             <div
               onClick={() => (playing ? pausePlay() : startPlay())}

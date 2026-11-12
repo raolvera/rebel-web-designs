@@ -57,7 +57,7 @@ body {
   text-shadow: 0 0 18px rgba(225, 29, 42, 0.55), 0 0 2px rgba(255, 59, 63, 0.8);
 }
 
-/* --- Rebel Radio: make the YouTube iframe fill its container (container
+/* --- Media Player: make the YouTube iframe fill its container (container
    keeps its own inline height; only the iframe is forced to fill) --- */
 .rwd-yt-host > div,
 .rwd-yt-host iframe {
@@ -246,7 +246,7 @@ body {
 
 /* --- Phones: keep the glitch subtle and the page smooth ---
    Small screens can't redraw heavy blur + nonstop glitch every frame, which
-   made the wordmark and Rebel Radio flicker. */
+   made the wordmark and Media Player flicker. */
 @media (max-width: 639px), (orientation: landscape) and (max-height: 519px) {
   /* wordmark glitch: smaller offset, slower, only flickers part of the time */
   .glitch-auto::before,
@@ -516,7 +516,7 @@ body {
   .cw-dew { animation: none; }
 }
 
-/* --- Rebel Radio volume slider: red fill up to a red circle --- */
+/* --- Media Player volume slider: red fill up to a red circle --- */
 .rwd-range {
   -webkit-appearance: none;
   appearance: none;

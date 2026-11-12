@@ -85,7 +85,7 @@ free custom quote.
 ## More on the Website
 
 - **Rebel, the AI assistant:** ask questions about services and pricing anytime and get instant answers.
-- **Rebel Radio:** a built-in music player that keeps playing as you explore the site.
+- **Media Player:** a built-in music player that keeps playing as you explore the site.
 - **The Arcade:** a free browser game made by Rebel Web Designs, Rebel Runner.
 
 ## Let's Build Something Iconic
