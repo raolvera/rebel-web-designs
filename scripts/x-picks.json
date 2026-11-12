@@ -5,6 +5,8 @@
   "credits": {
     "2120123325280309704": "Rebel_520"
   },
+  "_noCredit": "noCredit = post ids whose handle isn't shown (photo and View on X link stay).",
+  "noCredit": ["2118695446059286804"],
   "_skipPhotos": "skipPhotos = post id -> which photos of that post to leave out (1 = first photo), e.g. duplicates of art already on a card.",
   "skipPhotos": {
     "2110158785104744738": [2, 3],

@@ -54,6 +54,19 @@ try {
       }
     }
   }
+  // "noCredit" in x-picks.json: post ids whose handle isn't shown on the site
+  // (e.g. a name not fit for a business page). The photo and its "View on X"
+  // link stay, so the post (and its creator) is still one click away; the link
+  // uses X's handle-free form so the name isn't in the page either.
+  const noCredit = new Set(picks.noCredit ?? []);
+  for (const s of stages) {
+    for (const p of posts[s]) {
+      if (!noCredit.has(p.id)) continue;
+      p.username = "";
+      p.author = "";
+      p.url = `https://x.com/i/status/${p.id}`;
+    }
+  }
   // Leave out photos listed in "skipPhotos" (post id -> photo numbers, 1 = first),
   // e.g. a photo that's a duplicate of art already on a card.
   const skip = picks.skipPhotos ?? {};
