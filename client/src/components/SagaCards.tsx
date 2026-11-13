@@ -88,7 +88,6 @@ const SCENE: Record<string, string> = {
   "2119736972608467142#4": "Chancellor Palpatine is a Sith Lord.",
   "2119497452617359833": "Thank you, my Master.", // @The__Comedian__ "Long Live the Empire" (the fall)
   "2117130187309768821": "I will even learn to stop people from dying.", // @SlytherinQueenl "We'll Have Our Home Again"
-  "2116990933103509723": "I have brought peace, freedom, justice, and security to my new Empire.", // @elonmusk throne room
   "2116610703776002104": "I'm here, Mom. You're safe.", // @dogeofficialceo, the Tusken camp
   "2118238059657560512": "We need a system where the politicians sit down and discuss the problem.", // @anakinOnSol town hall painting
   "2118814725740077100": "The ability to speak does not make you intelligent.", // Qui-Gon (the line on the photo)
