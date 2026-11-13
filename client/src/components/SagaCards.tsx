@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { CARD_IMG_SIZES, twImg, twSrcSet } from "../twImg";
 
 /**
  * Star Wars edit cards on the intro, floating OVER the webs and circuits
@@ -315,14 +316,6 @@ function withQuotes(list: { stage: Stage; post?: XPost }[]): Slide[] {
     seen.add(quote);
     return { stage, post, quote };
   });
-}
-
-// X's image CDN can send a smaller, lighter copy of any photo: "small" is at
-// most 680px (plenty for a 250px card, even on sharp screens), "large" is up
-// to 2048px (for the full-screen view). WebP is ~10x lighter than a full PNG.
-function twImg(url: string | undefined, size: "small" | "large"): string | undefined {
-  const m = url?.match(/^(https:\/\/pbs\.twimg\.com\/media\/[^.?]+)/);
-  return m ? `${m[1]}?format=webp&name=${size}` : url;
 }
 
 function formatViews(n: number) {
@@ -774,6 +767,7 @@ function SlideBody({ slide, active, load }: { slide: Slide; active: boolean; loa
     p?.image ? { src: twImg(p.image, "large")!, alt, credit: p.username ? `@${p.username}` : "", mode } : null;
   const canZoom = !!p?.image;
   const src = twImg(p?.image, "small");
+  const srcSet = twSrcSet(p?.image); // the browser picks 360px or 680px for the screen
   // the photo on screen loads first (React 18 needs the lowercase attribute)
   const priority = (active ? { fetchpriority: "high" } : {}) as Record<string, string>;
   return (
@@ -800,8 +794,8 @@ function SlideBody({ slide, active, load }: { slide: Slide; active: boolean; loa
           <>
             {/* the whole photo, never cropped; a soft blurred copy fills the
                 spare space (same file, so it's only downloaded once) */}
-            <img src={src} alt="" aria-hidden="true" decoding="async" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-md" />
-            <img src={src} alt={alt} decoding="async" referrerPolicy="no-referrer" {...priority} className="relative h-full w-full object-contain" />
+            <img src={src} srcSet={srcSet} sizes={CARD_IMG_SIZES} alt="" aria-hidden="true" decoding="async" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-md" />
+            <img src={src} srcSet={srcSet} sizes={CARD_IMG_SIZES} alt={alt} decoding="async" referrerPolicy="no-referrer" {...priority} className="relative h-full w-full object-contain" />
           </>
           )
         ) : (

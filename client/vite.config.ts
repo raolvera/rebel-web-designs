@@ -1,5 +1,7 @@
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
+import { CARD_IMG_SIZES, twImg, twSrcSet } from "./src/twImg";
 
 // Content Security Policy for the built site. GitHub Pages can't send custom
 // response headers, so it goes in a <meta> tag instead. Only added to the
@@ -21,6 +23,52 @@ const CSP = [
   "upgrade-insecure-requests",
 ].join("; ");
 
+// The Star Wars cards' photos come from x-posts.json (written by the deploy
+// just before the build), so the browser normally only learns about them once
+// the app has loaded. The build already knows each card's FIRST photo, so it
+// names those two in the page's <head> and the browser starts on them right
+// away. Same srcset/sizes as the cards (src/twImg.ts), so nothing downloads
+// twice. No x-posts.json (local builds) = no preload, nothing breaks.
+type Post = { image?: string; images?: string[] };
+function firstPhotos(): string[] {
+  try {
+    const d = JSON.parse(readFileSync(new URL("./public/x-posts.json", import.meta.url), "utf8")) as {
+      posts?: Record<string, Post[] | undefined>;
+    };
+    const first = (list?: Post[]) => list?.[0]?.images?.[0] ?? list?.[0]?.image;
+    // left card opens on the first Anakin photo (or the fall, if no Anakin);
+    // right card on the first Vader photo
+    return [first(d.posts?.anakin) ?? first(d.posts?.fall), first(d.posts?.vader)].filter((u): u is string => !!u);
+  } catch {
+    return [];
+  }
+}
+
+function preloadCardPhotos(): Plugin {
+  return {
+    name: "rwd-preload-card-photos",
+    apply: "build",
+    transformIndexHtml() {
+      return firstPhotos()
+        .map((u) => ({ href: twImg(u, "small"), srcset: twSrcSet(u) }))
+        .filter((p) => p.srcset)
+        .map((p) => ({
+          tag: "link",
+          attrs: {
+            rel: "preload",
+            as: "image",
+            href: p.href,
+            imagesrcset: p.srcset,
+            imagesizes: CARD_IMG_SIZES,
+            fetchpriority: "high",
+            referrerpolicy: "no-referrer",
+          },
+          injectTo: "head" as const,
+        }));
+    },
+  };
+}
+
 function cspMeta(): Plugin {
   return {
     name: "rwd-csp-meta",
@@ -32,7 +80,7 @@ function cspMeta(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [react(), cspMeta()],
+  plugins: [react(), cspMeta(), preloadCardPhotos()],
   server: {
     port: 5173,
     proxy: {
