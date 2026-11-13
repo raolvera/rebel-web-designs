@@ -317,6 +317,14 @@ function withQuotes(list: { stage: Stage; post?: XPost }[]): Slide[] {
   });
 }
 
+// X's image CDN can send a smaller, lighter copy of any photo: "small" is at
+// most 680px (plenty for a 250px card, even on sharp screens), "large" is up
+// to 2048px (for the full-screen view). WebP is ~10x lighter than a full PNG.
+function twImg(url: string | undefined, size: "small" | "large"): string | undefined {
+  const m = url?.match(/^(https:\/\/pbs\.twimg\.com\/media\/[^.?]+)/);
+  return m ? `${m[1]}?format=webp&name=${size}` : url;
+}
+
 function formatViews(n: number) {
   if (n >= 1e6) return `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1)}M`;
   if (n >= 1e3) return `${(n / 1e3).toFixed(n >= 1e4 ? 0 : 1)}K`;
@@ -606,6 +614,10 @@ function Carousel({ title, slides, side, saga, fitTo }: { title: string; slides:
           {slides.map((s, i) => {
             const active = i === idx % n;
             const before = (i - (idx % n) + n) % n > n / 2; // already shown -> exits left
+            // only the showing photo and its neighbors load (the next one has
+            // the whole 9s slide to arrive); the rest wait their turn
+            const ahead = (i - (idx % n) + n) % n;
+            const near = ahead <= 1 || ahead === n - 1;
             return (
               <div
                 key={i}
@@ -618,7 +630,7 @@ function Carousel({ title, slides, side, saga, fitTo }: { title: string; slides:
                   pointerEvents: active ? "auto" : "none",
                 }}
               >
-                <SlideBody slide={s} active={active} />
+                <SlideBody slide={s} active={active} load={near} />
               </div>
             );
           })}
@@ -754,18 +766,22 @@ function PhotoZoom() {
   );
 }
 
-function SlideBody({ slide, active }: { slide: Slide; active: boolean }) {
+function SlideBody({ slide, active, load }: { slide: Slide; active: boolean; load: boolean }) {
   const st = STAGES[slide.stage];
   const p = slide.post;
   const alt = p ? (p.username ? `${st.label} art by @${p.username}` : `${st.label} art`) : "";
   const zoomInfo = (mode: "hover" | "open"): Zoom =>
-    p?.image ? { src: p.image, alt, credit: p.username ? `@${p.username}` : "", mode } : null;
+    p?.image ? { src: twImg(p.image, "large")!, alt, credit: p.username ? `@${p.username}` : "", mode } : null;
   const canZoom = !!p?.image;
+  const src = twImg(p?.image, "small");
+  // the photo on screen loads first (React 18 needs the lowercase attribute)
+  const priority = (active ? { fetchpriority: "high" } : {}) as Record<string, string>;
   return (
     <>
+      <div className="relative h-[250px]">
       {/* media (hover = big preview on desktop/laptop, tap/click = full screen) */}
       <div
-        className={`relative h-[250px] overflow-hidden rounded-lg border border-white/10 bg-ink ${canZoom ? "cursor-zoom-in" : ""}`}
+        className={`absolute inset-0 overflow-hidden rounded-lg border border-white/10 bg-ink ${canZoom ? "cursor-zoom-in" : ""}`}
         role={canZoom ? "button" : undefined}
         tabIndex={canZoom && active ? 0 : -1}
         aria-label={canZoom ? `View the full picture: ${alt}` : undefined}
@@ -780,11 +796,14 @@ function SlideBody({ slide, active }: { slide: Slide; active: boolean }) {
         }}
       >
         {p?.image ? (
+          load && (
           <>
-            {/* the whole photo, never cropped; a soft blurred copy fills the spare space */}
-            <img src={p.image} alt="" aria-hidden="true" loading="lazy" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-md" />
-            <img src={p.image} alt={p.username ? `${st.label} art by @${p.username}` : `${st.label} art`} loading="lazy" referrerPolicy="no-referrer" className="relative h-full w-full object-contain" />
+            {/* the whole photo, never cropped; a soft blurred copy fills the
+                spare space (same file, so it's only downloaded once) */}
+            <img src={src} alt="" aria-hidden="true" decoding="async" referrerPolicy="no-referrer" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-40 blur-md" />
+            <img src={src} alt={alt} decoding="async" referrerPolicy="no-referrer" {...priority} className="relative h-full w-full object-contain" />
           </>
+          )
         ) : (
           // placeholder: a glowing lightsaber in the stage's color
           <div className="flex h-full w-full flex-col items-center justify-center gap-3" style={{ background: `radial-gradient(circle at 50% 60%, ${st.glow}, transparent 70%)` }}>
@@ -801,10 +820,13 @@ function SlideBody({ slide, active }: { slide: Slide; active: boolean }) {
             </span>
           </span>
         )}
+      </div>
         {/* every card shows its view count. Posts from before X counted views
-            (late 2022) report 0, so those show their likes instead. */}
+            (late 2022) report 0, so those show their likes instead. It sits
+            beside the photo button (not inside it), so the button's name for
+            screen readers matches what it does. */}
         {p && (
-          <span className="absolute right-1.5 top-1.5 flex items-center gap-1 rounded-full bg-ink/80 px-2 py-0.5 text-[10px] font-semibold text-silver">
+          <span className="pointer-events-none absolute right-1.5 top-1.5 flex items-center gap-1 rounded-full bg-ink/80 px-2 py-0.5 text-[10px] font-semibold text-silver">
             {p.views > 0 || !p.likes ? (
               <>
                 <svg viewBox="0 0 24 24" className="h-3 w-3" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
