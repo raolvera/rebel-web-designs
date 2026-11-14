@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Browser tab icon: "RWD" in white with a black outline, no background.
+     Letters as wide as the square allows (1px apart), a bit less tall so they
+     don't look squished. Drawn on a 32-pixel grid so edges land on whole
+     pixels at 32px / 64px. favicon.ico and apple-touch-icon.png are made from
+     this file. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="64" height="64">
+  <g fill="#ffffff" fill-rule="evenodd" stroke="#0a0a0b" stroke-width="2" stroke-linejoin="miter" paint-order="stroke">
+    <!-- R -->
+    <path d="M1 4H8L10 6V14L9 16L10 28H7L6 18H4V28H1Z M4 7H7V13H4Z"/>
+    <!-- W -->
+    <path d="M11 4H14V21L16 18L18 21V4H21V28H18L16 25L14 28H11Z"/>
+    <!-- D -->
+    <path d="M22 4H29L31 6V26L29 28H22Z M25 7H28V25H25Z"/>
+  </g>
+</svg>
