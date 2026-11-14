@@ -1,14 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Browser tab icon: "RWD" in white with a black outline, no background.
+     Tall letters that fill the whole square (as big as a tab icon allows).
      Drawn on a 32-pixel grid so edges land on whole pixels at 32px / 64px.
      favicon.ico and apple-touch-icon.png are made from this file. -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="64" height="64">
   <g fill="#ffffff" fill-rule="evenodd" stroke="#0a0a0b" stroke-width="2" stroke-linejoin="miter" paint-order="stroke">
     <!-- R -->
-    <path d="M2 9H8L10 11V15L9 16L10 23H7L6 17H5V23H2Z M5 12H7V14H5Z"/>
+    <path d="M2 2H8L10 4V14L9 15L10 30H7L6 17H5V30H2Z M5 6H7V13H5Z"/>
     <!-- W -->
-    <path d="M12 9H15V18L16.5 16L18 18V9H21V23H18L16.5 21L15 23H12Z"/>
+    <path d="M12 2H15V23L16.5 20L18 23V2H21V30H18L16.5 27L15 30H12Z"/>
     <!-- D -->
-    <path d="M23 9H29L31 11V21L29 23H23Z M26 12H28V20H26Z"/>
+    <path d="M23 2H29L31 4V28L29 30H23Z M26 6H28V26H26Z"/>
   </g>
 </svg>
